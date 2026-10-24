@@ -1,11 +1,14 @@
 #!/bin/sh
-# Start Career Bridge for a demo: builds the data if missing, starts the server, opens the browser.
-# Usage: ./demo.sh [port]     (needs the event data at ./sgi_dataset or $SGI_DATA)
+# Start Career Bridge for a demo and open the browser.
+#   Open-data build (always): builds data/atlas.json if missing. Needs the sgi_analysis outputs; see README.
+#   Private build (only if the licensed Lightcast files are present): also builds data/careerbridge.json.
+# Usage: ./demo.sh [port]
 cd "$(dirname "$0")" || exit 1
 PORT="${1:-8000}"
 PY="${PYTHON:-python3}"
-if [ ! -f data/careerbridge.json ]; then
-  echo "Building data (first run)..."
+[ -f data/atlas.json ] || { echo "Building open data (first run)..."; "$PY" pipeline/atlas.py || exit 1; }
+if [ ! -f data/careerbridge.json ] && [ -f "${SGI_DATA:-sgi_dataset}/lightcast/lc_occupation_ai_profile.csv" ]; then
+  echo "Building Lightcast data (first run)..."
   "$PY" pipeline/build.py || exit 1
 fi
 URL="http://localhost:$PORT/#/job/43-4051"

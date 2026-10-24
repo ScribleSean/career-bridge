@@ -47,3 +47,19 @@ The pipeline writes `data/careerbridge.json`. The server reads it and serves the
 - `GET /api/occupations/{soc}` -> occ + trend + genai + tasks + skills + strengths + paths (each path expanded with target occ summary)
 - `GET /api/board?quadrant=&family=&q=&sort=&dir=` -> rows (incl. years_behind_software, software_path_status; sort=years_behind_software puts not_started after behind, too_few_ads last) + summary {gap_workers, gap_share, gap_count, silent_workers, silent_share, silent_count, state_rate}; quadrant=`Silent gap` filters to silent_gap rows
 - Static files from `web/`. Data file path: env CB_DATA, else data/careerbridge.json, else data/reference_prototype.json (with a warning in /api/meta).
+
+
+## atlas.json (open data, `pipeline/atlas.py`)
+Built from BLS OEWS, O*NET and the Anthropic Economic Index only, so it can be hosted publicly. The page reads it directly; `careerbridge.json` is an optional overlay joined on `soc`.
+```
+{ "meta":  {"built_at", "horizon": 6, "scenarios": {"slow"|"base"|"fast": {"A", "P"}}, "usage_period", "oews_year", "sources": [...]},
+  "occ":    [{"soc", "title", "group", "us_jobs", "ma_jobs"|null, "us_wage", "ma_wage"|null,
+              "g",      // past growth, % a year, US 2019-2025, capped at the 5th/95th percentile
+              "z",      // where Claude is used today, percentile 0-100
+              "basis",  // "usage+content" | "content only (AEI withheld)" | "usage only"
+              "auto",   // % of the group's Claude conversations where work was handed off
+              "tier", "posture", "edu", "prep"}],
+  "plans":  {soc: {"why", "lean": [activity], "use": [activity], "moves": [{"soc", "sim", "loose", "skills": [..]}], "timeline": [{"when", "text"}]}},
+  "usage":  {"use_case": [{"name", "apr", "may"}], "automation": {"apr", "may"}, "topics": [{"name", "apr", "may"}]} }
+```
+`titles.json` is `[[reported job title, soc], ...]` for search. Scenario rule: `jobs2031 = jobs x (1 + g/100)^6 x (1 - A x P x auto/100 x z/100)`.
