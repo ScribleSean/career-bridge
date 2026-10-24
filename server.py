@@ -54,9 +54,11 @@ ALIASES = {
 
 SOC_RE = re.compile(r"^\d{2}-\d{4}$")
 BOARD_SORT_KEYS = {"title", "ma_employment", "exposure", "ma_ai_2025", "us_ai_2025",
-                   "ma_median_wage", "bachelors_plus_pct", "major_group", "claude_share_us"}
+                   "ma_median_wage", "bachelors_plus_pct", "major_group", "claude_share_us",
+                   "years_behind_software"}
 SUMMARY_FIELDS = ("soc", "title", "major_group", "ma_employment", "exposure", "ma_ai_2025", "quadrant")
-BOARD_FIELDS = SUMMARY_FIELDS + ("us_ai_2025", "ma_median_wage", "bachelors_plus_pct", "ma_confidence")
+BOARD_FIELDS = SUMMARY_FIELDS + ("us_ai_2025", "ma_median_wage", "bachelors_plus_pct", "ma_confidence",
+                                   "years_behind_software", "software_path_status")
 
 
 def resolve_data_path():
@@ -80,6 +82,8 @@ class Store:
         self.occ = d.get("occ", [])
         self.by_soc = {o["soc"]: o for o in self.occ}
         self.trend = d.get("trend", {})
+        self.genai = d.get("genai", {})
+        self.growth = d.get("growth", {})
         self.tasks = d.get("tasks", {})
         self.skills = d.get("skills", {})
         self.strengths = d.get("strengths", {})
@@ -185,6 +189,8 @@ class Store:
         return {
             "occ": o,
             "trend": self.trend.get(soc, []),
+            "genai": self.genai.get(soc, []),
+            "growth": self.growth.get(soc, []),
             "tasks": self.tasks.get(soc, []),
             "skills": self.skills.get(soc, []),
             "strengths": self.strengths.get(soc, []),
@@ -212,12 +218,18 @@ class Store:
                 continue
             rows.append(o)
 
+        def val(o):
+            # "Not started" sorts as furthest behind software; "too few ads" stays blank (last).
+            if sort == "years_behind_software" and o.get("software_path_status") == "not_started":
+                return 99.0
+            return o.get(sort)
+
         def key(o):
-            v = o.get(sort)
+            v = val(o)
             return (str(v).lower() if isinstance(v, str) else v)
 
-        present = [o for o in rows if o.get(sort) is not None]
-        missing = [o for o in rows if o.get(sort) is None]
+        present = [o for o in rows if val(o) is not None]
+        missing = [o for o in rows if val(o) is None]
         present.sort(key=key, reverse=(direction == "desc"))
         rows = present + missing  # nulls always last
         return {
@@ -232,7 +244,7 @@ class Store:
 
     def meta_payload(self):
         m = dict(self.meta)
-        m["counts"] = {k: len(getattr(self, k)) for k in ("occ", "trend", "tasks", "skills", "strengths", "paths")}
+        m["counts"] = {k: len(getattr(self, k)) for k in ("occ", "trend", "genai", "tasks", "skills", "strengths", "paths")}
         m["quadrant_counts"] = {q: sum(1 for o in self.occ if o.get("quadrant") == q) for q in QUADRANTS}
         m["families"] = self.families
         m["aliases"] = ALIASES

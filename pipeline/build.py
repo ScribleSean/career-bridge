@@ -42,6 +42,7 @@ LABELS = {
     (False, False): "Lower exposure, low adoption",
 }
 THIN_LABEL = "Too few MA job ads to measure"
+SOFTWARE_ONET = "15-1252.00"  # Software Developers: the reference path for "years behind software"
 
 
 def confidence(postings):
@@ -121,6 +122,7 @@ def lightcast_by_soc(prof, xw):
             "ma_ai": wrate(g, "ma_job_postings", "ma_pct_postings_ai_skills"),
             "us_ai": wrate(g, "us_job_postings", "us_pct_postings_ai_skills"),
             "ma_genai": wrate(g, "ma_job_postings", "ma_pct_postings_genai_skills"),
+            "us_genai": wrate(g, "us_job_postings", "us_pct_postings_genai_skills"),
         })
     by_year = pd.DataFrame(rows)
     for geo in ("ma", "us"):  # THIN rates are blank
@@ -246,6 +248,29 @@ def paths(occ, vec):
     return out
 
 
+# ---------------------------------------------------------------- software's path
+def software_curve(prof):
+    """US % of Software Developers postings asking for GenAI skills, by year."""
+    s = prof[prof.onet == SOFTWARE_ONET].sort_values("year")
+    return [[int(r.year), round(float(r.us_pct_postings_genai_skills), 2)]
+            for r in s.itertuples() if int(r.year) in TREND_YEARS]
+
+
+def years_behind(us_2026, curve):
+    """Shared method: the year t* when software had this job's 2026 US GenAI %, by linear
+    interpolation; years_behind = 2026 - t*, rounded to 0.5. Returns (value, status)."""
+    if us_2026 is None or pd.isna(us_2026):
+        return None, "too_few_ads"
+    yrs = [c[0] for c in curve]
+    vals = [c[1] for c in curve]
+    if us_2026 >= vals[-1]:
+        return 0.0, "level"
+    if us_2026 < vals[0]:
+        return None, "not_started"
+    t = float(np.interp(us_2026, vals, yrs))  # software's curve rises every year
+    return round((yrs[-1] - t) * 2) / 2, "behind"
+
+
 # ---------------------------------------------------------------- assemble
 def quadrant(exposure, ma_ai, conf, rate):
     if conf == "THIN" or ma_ai is None or pd.isna(ma_ai):
@@ -304,6 +329,14 @@ def build():
         g = g.set_index("year")
         trend[soc] = [[yr, num(g.ma_ai.get(yr)), num(g.us_ai.get(yr))] for yr in TREND_YEARS if yr in g.index]
 
+    soft = software_curve(d["prof"])
+    genai = {}
+    for soc, g in by_year[by_year.soc.isin(socs)].groupby("soc"):
+        g = g.set_index("year")
+        genai[soc] = [[yr, num(g.ma_genai.get(yr)), num(g.us_genai.get(yr))] for yr in TREND_YEARS if yr in g.index]
+
+    growth = load_growth()
+    gocc = growth.get("occ", {})
     out_occ = []
     for r in occ.to_dict("records"):
         rec = {k: r[k] for k in ("soc", "title", "major_group", "exposure")}
@@ -313,6 +346,13 @@ def build():
                    us_median_wage=num(r["us_median_wage"], 0), quadrant=r["quadrant"],
                    bachelors_plus_pct=num(r["bachelors_plus_pct"], 1), job_zone=num(r["job_zone"], 0),
                    claude_share_us=num(r["claude_share_us"], 3))
+        us26 = {row[0]: row[2] for row in genai.get(r["soc"], [])}.get(TREND_YEARS[-1])
+        rec["years_behind_software"], rec["software_path_status"] = years_behind(us26, soft)
+        g = gocc.get(r["soc"], {})
+        rec["ma_growth_pct"] = g.get("growth_pct")
+        rec["ma_growth_since"] = g.get("since")
+        rec["ma_growth_vs_all"] = g.get("vs_all_pts")
+        rec["ma_growth_status"] = g.get("status", "too_little_data")
         out_occ.append(rec)
 
     result = {
@@ -321,6 +361,8 @@ def build():
             "state_rate_2025": rate,
             "exposure_median": EXPOSURE_CUT,
             "exposure_median_computed": round(wmedian(occ.exposure, occ.ma_employment), 1),
+            "software_genai_us": soft,
+            "ma_growth": growth.get("meta", {}),
             "sources": [
                 "Lightcast AI Exposure & Augmentation Index (October 2026) and job postings 2023-2026 (2026 = Jan-Sep). Data Source: Lightcast, 2026.",
                 "BLS OEWS May 2025, Massachusetts and US",
@@ -330,6 +372,8 @@ def build():
         },
         "occ": out_occ,
         "trend": trend,
+        "genai": genai,
+        "growth": {s: gocc[s]["emp"] for s in socs if s in gocc},
         "tasks": {s: v for s, v in aei_tasks(d["aei_long"], d["tasks"], xw).items() if s in set(socs)},
         "skills": top_skills(d["lc_skills"], xw, occ.set_index("soc").ma_confidence),
         "strengths": strengths(vec, emp),
@@ -339,6 +383,21 @@ def build():
     return result
 
 
+def load_growth():
+    """MA job growth 2019-2025 from pipeline/growth.py (data/ma_growth.json). Built here if the
+    OEWS history files are present; empty if not (the page then hides the growth panel)."""
+    path = HERE.parent / "data" / "ma_growth.json"
+    if not path.exists():
+        try:
+            import growth as growth_mod  # pipeline/growth.py
+            if list(growth_mod.SRC.glob("state_*.xlsx")):
+                return growth_mod.build()
+        except Exception as e:  # missing history files should not stop the main build
+            print(f"growth step skipped: {e}")
+        return {}
+    return json.loads(path.read_text())
+
+
 def summarize(res):
     occ = pd.DataFrame(res["occ"])
     print(f"occupations: {len(occ)}  MA workers: {occ.ma_employment.sum():,.0f}")
@@ -346,7 +405,9 @@ def summarize(res):
           f"(MA-employment median here: {res['meta']['exposure_median_computed']})")
     q = occ.groupby("quadrant").agg(occupations=("soc", "size"), ma_workers=("ma_employment", "sum"))
     print(q.to_string())
-    print({k: len(res[k]) for k in ("trend", "tasks", "skills", "strengths", "paths")})
+    print({k: len(res[k]) for k in ("trend", "genai", "tasks", "skills", "strengths", "paths")})
+    print("software GenAI US:", res["meta"]["software_genai_us"])
+    print(occ.software_path_status.value_counts().to_dict())
 
 
 def main():

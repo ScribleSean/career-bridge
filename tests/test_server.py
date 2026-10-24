@@ -168,5 +168,47 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(self.get("/missing.html")[0], 404)
 
 
+BUILT = os.path.join(ROOT, "data", "careerbridge.json")
+
+
+@unittest.skipUnless(os.path.exists(BUILT), "careerbridge.json not built")
+class BuiltDataTest(unittest.TestCase):
+    """New fields for "Following software's path?" against the built data."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = server.make_server(port=0, data_path=BUILT)
+        cls.base = "http://127.0.0.1:%d" % cls.httpd.server_address[1]
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+
+    get, json = ServerTest.get, ServerTest.json
+
+    def test_meta_software_curve(self):
+        m = self.json("/api/meta")
+        self.assertEqual([r[0] for r in m["software_genai_us"]], [2023, 2024, 2025, 2026])
+
+    def test_detail_genai(self):
+        d = self.json("/api/occupations/15-1252")
+        self.assertTrue(d["genai"] and all(len(r) == 3 for r in d["genai"]))
+        self.assertEqual(d["occ"]["software_path_status"], "level")
+
+    def test_board_fields_and_sort(self):
+        b = self.json("/api/board?quadrant=all&sort=years_behind_software&dir=asc")
+        self.assertEqual(b["sort"], "years_behind_software")
+        for r in b["rows"]:
+            self.assertIn("years_behind_software", r)
+            self.assertIn(r["software_path_status"], {"level", "behind", "not_started", "too_few_ads"})
+        rank = {"level": 0, "behind": 1, "not_started": 2, "too_few_ads": 3}
+        st = [rank[r["software_path_status"]] for r in b["rows"]]
+        self.assertEqual(st, sorted(st))  # level, behind (ascending), not started, then blanks
+        yb = [r["years_behind_software"] for r in b["rows"] if r["software_path_status"] == "behind"]
+        self.assertEqual(yb, sorted(yb))
+
+
 if __name__ == "__main__":
     unittest.main()

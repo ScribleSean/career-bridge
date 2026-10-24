@@ -9,9 +9,9 @@ const DEFAULT_META = {
   sources: ['Data Source: Lightcast, 2026 (AI Exposure and Adoption by Occupation, 2023-Sep 2026)', 'BLS OEWS May 2025', 'O*NET 31.0', 'Anthropic Economic Index, June 2026 release'],
 };
 const ALIASES = {rn: 'registered nurses', admin: 'administrative', cna: 'nursing assistants', cs: 'customer service', hr: 'human resources', it: 'computer', dev: 'developers', devs: 'developers', teacher: 'teachers', nurse: 'nurses', rep: 'representatives', reps: 'representatives'};
-const SORT_KEYS = new Set(['title', 'ma_employment', 'exposure', 'ma_ai_2025', 'us_ai_2025', 'ma_median_wage', 'bachelors_plus_pct', 'major_group', 'claude_share_us']);
+const SORT_KEYS = new Set(['title', 'ma_employment', 'exposure', 'ma_ai_2025', 'us_ai_2025', 'ma_median_wage', 'bachelors_plus_pct', 'major_group', 'claude_share_us', 'years_behind_software']);
 const SUMMARY = ['soc', 'title', 'major_group', 'ma_employment', 'exposure', 'ma_ai_2025', 'quadrant'];
-const BOARD = SUMMARY.concat(['us_ai_2025', 'ma_median_wage', 'bachelors_plus_pct', 'ma_confidence']);
+const BOARD = SUMMARY.concat(['us_ai_2025', 'ma_median_wage', 'bachelors_plus_pct', 'ma_confidence', 'years_behind_software', 'software_path_status']);
 const pick = (o, fields) => Object.fromEntries(fields.map(k => [k, o[k] ?? null]));
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -61,7 +61,7 @@ export function makeStaticApi(d, dataFile = 'careerbridge.json') {
       if (!t) return null;
       return {soc: p[0], similarity: p[1], wage_diff: p[2], bridge_skills: String(p[3] || '').split(',').map(s => s.trim()).filter(Boolean), target: pick(t, BOARD.concat(['job_zone']))};
     }).filter(Boolean).sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
-    return {occ: o, trend: d.trend?.[soc] || [], tasks: d.tasks?.[soc] || [], skills: d.skills?.[soc] || [], strengths: d.strengths?.[soc] || [], paths};
+    return {occ: o, trend: d.trend?.[soc] || [], genai: d.genai?.[soc] || [], growth: d.growth?.[soc] || [], tasks: d.tasks?.[soc] || [], skills: d.skills?.[soc] || [], strengths: d.strengths?.[soc] || [], paths};
   }
 
   function board(p) {
@@ -73,15 +73,17 @@ export function makeStaticApi(d, dataFile = 'careerbridge.json') {
     if (dir !== 'asc' && dir !== 'desc') dir = (sort === 'title' || sort === 'major_group') ? 'asc' : 'desc';
     const rows = occ.filter(o => (!quadrant || quadrant === 'all' || quadrant === 'All jobs' || o.quadrant === quadrant)
       && (!family || o.major_group === family) && ws.every(w => lower.get(o.soc).includes(w)));
-    const present = rows.filter(o => o[sort] != null), missing = rows.filter(o => o[sort] == null);
-    const key = o => typeof o[sort] === 'string' ? o[sort].toLowerCase() : o[sort];
+    // "Not started" sorts as furthest behind software; "too few ads" stays blank (last). Same as server.py.
+    const val = o => (sort === 'years_behind_software' && o.software_path_status === 'not_started') ? 99 : o[sort];
+    const present = rows.filter(o => val(o) != null), missing = rows.filter(o => val(o) == null);
+    const key = o => typeof val(o) === 'string' ? val(o).toLowerCase() : val(o);
     present.sort((a, b) => { const x = key(a), y = key(b); const c = x < y ? -1 : x > y ? 1 : 0; return dir === 'desc' ? -c : c; });
     const out = present.concat(missing);
     return {rows: out.map(o => pick(o, BOARD)), count: out.length, workers: out.reduce((s, o) => s + (o.ma_employment || 0), 0), sort, dir, summary, quadrants: QUADRANTS, families};
   }
 
   function metaPayload() {
-    return {...meta, counts: Object.fromEntries(['occ', 'trend', 'tasks', 'skills', 'strengths', 'paths'].map(k => [k, Array.isArray(d[k]) ? d[k].length : Object.keys(d[k] || {}).length])),
+    return {...meta, counts: Object.fromEntries(['occ', 'trend', 'genai', 'tasks', 'skills', 'strengths', 'paths'].map(k => [k, Array.isArray(d[k]) ? d[k].length : Object.keys(d[k] || {}).length])),
       quadrant_counts: Object.fromEntries(QUADRANTS.map(q => [q, occ.filter(o => o.quadrant === q).length])), families, aliases: ALIASES, using_reference: false, data_file: dataFile, static_mode: true};
   }
 

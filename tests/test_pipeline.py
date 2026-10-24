@@ -13,7 +13,9 @@ REF = DATA / "reference_prototype.json"
 
 OCC_KEYS = {"soc", "title", "major_group", "exposure", "ma_ai_2025", "us_ai_2025", "ma_genai_2025",
             "ma_confidence", "ma_employment", "ma_median_wage", "us_median_wage", "quadrant",
-            "bachelors_plus_pct", "job_zone", "claude_share_us"}
+            "bachelors_plus_pct", "job_zone", "claude_share_us",
+            "years_behind_software", "software_path_status",
+            "ma_growth_pct", "ma_growth_since", "ma_growth_vs_all", "ma_growth_status"}
 QUADRANTS = {"High exposure, low adoption", "High exposure, high adoption",
              "Lower exposure, high adoption", "Lower exposure, low adoption",
              "Too few MA job ads to measure"}
@@ -27,7 +29,24 @@ class TestCareerBridge(unittest.TestCase):
         cls.ref = json.loads(REF.read_text()) if REF.exists() else None
 
     def test_shape(self):
-        self.assertEqual(set(self.d), {"meta", "occ", "trend", "tasks", "skills", "strengths", "paths"})
+        self.assertTrue({"meta", "occ", "trend", "genai", "tasks", "skills", "strengths", "paths"} <= set(self.d))
+        self.assertTrue(set(self.d) <= {"meta", "occ", "trend", "genai", "growth", "tasks", "skills", "strengths", "paths"})
+
+    def test_growth(self):
+        """MA growth 2019-2025 (present when OEWS history files were available at build time)."""
+        if "growth" not in self.d:
+            self.skipTest("built without OEWS history")
+        g = self.d["meta"]["ma_growth"]
+        self.assertEqual((g["first_year"], g["last_year"]), (2019, 2025))
+        self.assertAlmostEqual(g["all_growth_pct"], 0.5, delta=0.2)
+        occ = {o["soc"]: o for o in self.d["occ"]}
+        rn = occ["29-1141"]
+        self.assertEqual(rn["ma_growth_status"], "faster")
+        series = dict(self.d["growth"]["29-1141"])
+        self.assertAlmostEqual(rn["ma_growth_pct"], 100 * (series[2025] / series[2019] - 1), delta=0.1)
+        self.assertEqual(series[2025], rn["ma_employment"])  # 2025 matches the OEWS May 2025 file
+        for o in self.d["occ"]:
+            self.assertIn(o["ma_growth_status"], {"faster", "slower", "similar", "too_little_data"})
         for k in ("built_at", "state_rate_2025", "exposure_median", "sources"):
             self.assertIn(k, self.d["meta"])
         for o in self.d["occ"]:
@@ -44,7 +63,7 @@ class TestCareerBridge(unittest.TestCase):
             self.assertTrue(all(len(r) == 5 and r[3] in ("MA", "US") for r in rows), soc)
         for soc, rows in self.d["strengths"].items():
             self.assertTrue(len(rows) <= 4 and all(r[2] > 0 for r in rows), soc)
-        for key in ("trend", "tasks", "skills", "strengths", "paths"):
+        for key in ("trend", "genai", "tasks", "skills", "strengths", "paths"):
             self.assertTrue(set(self.d[key]) <= set(self.occ), key)
 
     def test_no_duplicate_socs(self):
@@ -101,6 +120,44 @@ class TestCareerBridge(unittest.TestCase):
         self.assertAlmostEqual(o["exposure"], 64.0, delta=0.5)
         self.assertAlmostEqual(o["ma_ai_2025"], 0.37, delta=0.5)
         self.assertEqual(o["quadrant"], "High exposure, low adoption")
+
+    # ---- following software's path ----
+    def software_years_behind(self, us26):
+        c = self.d["meta"]["software_genai_us"]
+        if us26 is None:
+            return None, "too_few_ads"
+        if us26 >= c[-1][1]:
+            return 0.0, "level"
+        if us26 < c[0][1]:
+            return None, "not_started"
+        for (y0, v0), (y1, v1) in zip(c, c[1:]):
+            if v0 <= us26 <= v1:
+                t = y0 + (us26 - v0) / (v1 - v0) * (y1 - y0)
+                return round((2026 - t) * 2) / 2, "behind"
+
+    def test_software_curve(self):
+        known = {2023: 0.47, 2024: 2.25, 2025: 5.92, 2026: 13.91}
+        c = dict(map(tuple, self.d["meta"]["software_genai_us"]))
+        self.assertEqual(set(c), set(known))
+        for yr, v in known.items():
+            self.assertAlmostEqual(c[yr], v, delta=0.05, msg=yr)
+
+    def test_genai_shape(self):
+        for soc, rows in self.d["genai"].items():
+            self.assertTrue(all(len(r) == 3 and 2023 <= r[0] <= 2026 for r in rows), soc)
+
+    def test_years_behind_rule(self):
+        self.assertEqual(self.occ["15-1252"]["software_path_status"], "level")
+        self.assertEqual(self.occ["15-1252"]["years_behind_software"], 0)
+        statuses = set()
+        for o in self.d["occ"]:
+            us26 = {r[0]: r[2] for r in self.d["genai"].get(o["soc"], [])}.get(2026)
+            yb, st = self.software_years_behind(us26)
+            self.assertEqual(o["software_path_status"], st, o["soc"])
+            self.assertEqual(o["years_behind_software"], yb, o["soc"])
+            statuses.add(st)
+        self.assertEqual(statuses, {"level", "behind", "not_started", "too_few_ads"})
+        self.assertIn(self.occ["27-1011"]["years_behind_software"], (0.5, 1.0))  # Art Directors
 
     def test_close_to_reference(self):
         if self.ref is None:

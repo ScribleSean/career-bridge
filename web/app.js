@@ -170,7 +170,7 @@ async function renderOcc(soc) {
       h('span', {class: 'grp'}, o.major_group + ' · SOC ' + o.soc),
       h('h2', {id: 'occ-title', tabindex: '-1'}, o.title),
       h('div', {class: 'verdict'}, h('span', {class: 'pill ' + cls}, o.quadrant), h('p', {}, text))),
-    h('div', {class: 'grid'}, panelStand(o, d.trend), panelUse(o, d), panelSkills(d), panelMoves(o, d.paths))));
+    h('div', {class: 'grid'}, panelStand(o, d.trend), panelSoftware(o, d.genai), panelGrowth(o, d.growth), panelUse(o, d), panelSkills(d), panelMoves(o, d.paths))));
   if (shownSoc && shownSoc !== o.soc && root.getBoundingClientRect().top < 0) {
     root.scrollIntoView({block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
     $('occ-title').focus({preventScroll: true});
@@ -228,6 +228,106 @@ function spark(tr) {
   });
   return h('div', {class: 'spark'}, h('div', {class: 'legend'}, h('span', {style: '--c: var(--ai)'}, 'Massachusetts'), h('span', {style: '--c: var(--muted)'}, 'United States'), h('span', {}, '*Jan–Sep')), s);
 }
+
+/* Following software's path: when did software employers ask for GenAI skills as often as this job's do now? */
+const yrsTxt = n => n === 0.5 ? 'about half a year' : n === 1 ? 'about 1 year' : `about ${n} years`;
+function whenTxt(t) {
+  const y = Math.floor(t), f = t - y;
+  return (f < 0.34 ? 'early ' : f < 0.67 ? 'mid-' : 'late ') + y;
+}
+function softwareSentence(o) {
+  const st = o.software_path_status, yb = o.years_behind_software;
+  if (st === 'level') return 'Level with software: employers here ask for generative-AI skills at least as often as software employers do now.';
+  if (st === 'behind' && yb === 0) return 'Close to level with software: employers here ask for generative-AI skills almost as often as software employers do now.';
+  if (st === 'behind' && yb != null) return `Employers here ask for generative-AI skills about as often as software employers did in ${whenTxt(2026 - yb)}: ${yrsTxt(yb)} behind.`;
+  if (st === 'not_started') return 'Not started: fewer job ads here ask for generative-AI skills than software’s did in 2023.';
+  return 'Too few job ads to tell.';
+}
+function panelSoftware(o, genai) {
+  const soft = META.software_genai_us || [];
+  const job = (genai || []).map(r => [r[0], r[2]]);
+  return h('div', {class: 'panel'},
+    h('h3', {}, 'Following software’s path?'),
+    h('p', {class: 'sub'}, 'Software development changed first. US job ads asking for generative-AI skills'),
+    soft.length > 1 ? softwareChart(soft, job, o) : null,
+    h('p', {style: 'margin:0'}, softwareSentence(o)),
+    h('p', {class: 'foot', style: 'margin:0'}, 'A pattern in employer demand, not a forecast of jobs.'));
+}
+function softwareChart(soft, job, o) {
+  const W = 600, H = 160, L = 44, R = 56, T = 14, B = 26;
+  const years = soft.map(r => r[0]);
+  const vals = soft.concat(job).map(r => r[1]).filter(v => v != null);
+  const max = Math.max(1, ...vals) * 1.15;
+  const x = yr => L + (yr - years[0]) * (W - L - R) / (years[years.length - 1] - years[0]), y = v => T + (H - T - B) * (1 - v / max);
+  const label = 'US job ads asking for generative-AI skills. Software developers: ' + soft.map(r => `${r[0]} ${r[1]}%`).join(', ') + '. This job: ' + job.map(r => `${r[0]} ${r[1] ?? 'n/a'}%`).join(', ') + '. 2026 is January to September.';
+  const s = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': label});
+  [0, max / 2].forEach(v => { s.append(svgEl('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': 1})); const t = svgEl('text', {x: L - 6, y: y(v) + 4, 'text-anchor': 'end'}); t.textContent = v.toFixed(v < 10 ? 1 : 0) + '%'; s.append(t); });
+  years.forEach(yr => { const t = svgEl('text', {x: x(yr), y: H - 6, 'text-anchor': 'middle'}); t.textContent = yr === 2026 ? '2026 Jan–Sep' : yr; s.append(t); });
+  // Dotted guide from this job's 2026 level back to where software stood at that level.
+  const j26 = job.find(r => r[0] === 2026);
+  if (o.software_path_status === 'behind' && o.years_behind_software != null && j26 && j26[1] != null) {
+    s.append(svgEl('line', {x1: x(2026 - o.years_behind_software), x2: x(2026), y1: y(j26[1]), y2: y(j26[1]), stroke: 'var(--muted)', 'stroke-width': 1, 'stroke-dasharray': '2 3'}));
+  }
+  const ends = {};
+  [['s', soft], ['j', job]].forEach(([k, arr]) => { const r = arr.filter(r => r[1] != null).slice(-1)[0]; if (r) ends[k] = y(r[1]); });
+  if (ends.s != null && ends.j != null && Math.abs(ends.s - ends.j) < 16) { const mid = (ends.s + ends.j) / 2; const up = ends.s <= ends.j; ends.s = mid + (up ? -8 : 8); ends.j = mid + (up ? 8 : -8); }
+  [['s', soft, 'var(--muted)', '4 3'], ['j', job, 'var(--ai)', '']].forEach(([k, arr, c, dash]) => {
+    const pts = arr.filter(r => r[1] != null).map(r => [x(r[0]), y(r[1])]);
+    if (!pts.length) return;
+    if (pts.length > 1) s.append(svgEl('polyline', {points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: c, 'stroke-width': 2, 'stroke-dasharray': dash, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'}));
+    const last = pts[pts.length - 1]; s.append(svgEl('circle', {cx: last[0], cy: last[1], r: 3.5, fill: c}));
+    const lv = arr.filter(r => r[1] != null).slice(-1)[0][1];
+    const t = svgEl('text', {x: last[0] + 8, y: ends[k] + 4}); t.textContent = lv.toFixed(1) + '%'; t.setAttribute('style', `fill:${c}`); s.append(t);
+  });
+  return h('div', {class: 'spark'}, h('div', {class: 'legend'}, h('span', {style: '--c: var(--ai)'}, 'This job'), h('span', {style: '--c: var(--muted)'}, 'Software developers')), s);
+}
+/* MA job growth, 2019-2025 (BLS OEWS): past change vs all MA jobs, not a forecast. */
+function growthSentence(o, all) {
+  const g = o.ma_growth_pct, vs = o.ma_growth_vs_all, since = o.ma_growth_since;
+  if (g == null) return 'Not enough Massachusetts data across these years to compare.';
+  const dir = g >= 0 ? `grew ${g.toFixed(0)}%` : `shrank ${Math.abs(g).toFixed(0)}%`;
+  const cmp = o.ma_growth_status === 'faster' ? 'faster than' : o.ma_growth_status === 'slower' ? 'slower than' : 'about the same as';
+  return `Jobs here ${dir} since ${since}, ${cmp} Massachusetts jobs overall (${all >= 0 ? '+' : ''}${all}% over ${since === 2019 ? 'the same years' : '2019–2025'}).`;
+}
+function panelGrowth(o, series) {
+  const gm = META.ma_growth || {};
+  if (!gm.all_jobs || !gm.all_jobs.length) return null;
+  const pill = {faster: ['ai', 'Growing faster than average'], slower: ['gap', 'Growing slower than average'], similar: ['neutral', 'About average'], too_little_data: ['neutral', 'Too little data']}[o.ma_growth_status || 'too_little_data'];
+  return h('div', {class: 'panel'},
+    h('h3', {}, 'Job growth in Massachusetts'),
+    h('p', {class: 'sub'}, 'People employed in this job, May of each year (BLS OEWS)'),
+    h('div', {class: 'verdict'}, h('span', {class: 'pill ' + pill[0]}, pill[1])),
+    (series || []).length > 1 ? growthChart(series, gm.all_jobs) : null,
+    h('p', {style: 'margin:0'}, growthSentence(o, gm.all_growth_pct)),
+    h('p', {class: 'foot', style: 'margin:0'}, 'What happened, not why: the pandemic, interest rates and tech layoffs overlap these years. Not a forecast. Excludes self-employed.'));
+}
+function growthChart(series, all) {
+  // Both lines indexed to 100 at this job's first year, so the job and all MA jobs share one scale.
+  const W = 600, H = 160, L = 44, R = 70, T = 14, B = 26;
+  const y0 = series[0][0], allBy = Object.fromEntries(all), base = series[0][1], allBase = allBy[y0];
+  const job = series.map(([yr, e]) => [yr, 100 * e / base]);
+  const tot = allBase ? all.filter(([yr]) => yr >= y0).map(([yr, e]) => [yr, 100 * e / allBase]) : [];
+  const vals = job.concat(tot).map(r => r[1]);
+  const lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.03;
+  const yrs = series.map(r => r[0]), x0 = yrs[0], x1 = yrs[yrs.length - 1];
+  const x = yr => L + (yr - x0) * (W - L - R) / Math.max(1, x1 - x0), y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const s = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Employment in this job, ' + series.map(r => `${r[0]}: ${Math.round(r[1]).toLocaleString('en-US')}`).join(', ')});
+  [lo + (hi - lo) * 0.1, 100, hi - (hi - lo) * 0.1].forEach(v => { s.append(svgEl('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': 1})); });
+  const t100 = svgEl('text', {x: L - 6, y: y(100) + 4, 'text-anchor': 'end'}); t100.textContent = String(y0); s.append(t100);
+  yrs.forEach(yr => { const t = svgEl('text', {x: x(yr), y: H - 6, 'text-anchor': 'middle'}); t.textContent = yr; s.append(t); });
+  [[tot, 'var(--muted)', '4 3', 'All MA jobs'], [job, 'var(--ai)', '', 'This job']].forEach(([arr, c, dash]) => {
+    if (arr.length < 2) return;
+    const pts = arr.map(r => [x(r[0]), y(r[1])]);
+    s.append(svgEl('polyline', {points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: c, 'stroke-width': 2, 'stroke-dasharray': dash, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'}));
+    const last = pts[pts.length - 1]; s.append(svgEl('circle', {cx: last[0], cy: last[1], r: 3.5, fill: c}));
+    const v = arr[arr.length - 1][1] - 100;
+    const t = svgEl('text', {x: last[0] + 8, y: last[1] + 4}); t.textContent = (v >= 0 ? '+' : '') + v.toFixed(0) + '%'; t.setAttribute('style', `fill:${c}`); s.append(t);
+  });
+  const first = series[0], lastE = series[series.length - 1];
+  return h('div', {class: 'spark'},
+    h('div', {class: 'legend'}, h('span', {style: '--c: var(--ai)'}, `This job: ${Math.round(first[1]).toLocaleString('en-US')} → ${Math.round(lastE[1]).toLocaleString('en-US')}`), h('span', {style: '--c: var(--muted)'}, 'All MA jobs')), s);
+}
+const fmtYB = o => o.software_path_status === 'level' ? 'level' : o.software_path_status === 'not_started' ? 'not started' : o.years_behind_software == null ? '—' : String(o.years_behind_software);
 
 function panelUse(o, d) {
   const tasks = (d.tasks || []).filter(t => t[1] > 0);
@@ -291,7 +391,7 @@ function panelMoves(o, paths) {
 }
 
 /* ---------- board view ---------- */
-const COLS = [['title', 'Job', 0, ''], ['ma_employment', 'MA workers', 1, ''], ['exposure', 'Exposure', 1, ''], ['ma_ai_2025', 'Ads asking AI', 1, ''], ['us_ai_2025', 'US ads asking AI', 1, 'opt'], ['ma_median_wage', 'Median wage', 1, 'opt'], ['bachelors_plus_pct', 'Bachelor’s+', 1, 'opt']];
+const COLS = [['title', 'Job', 0, ''], ['ma_employment', 'MA workers', 1, ''], ['exposure', 'Exposure', 1, ''], ['ma_ai_2025', 'Ads asking AI', 1, ''], ['us_ai_2025', 'US ads asking AI', 1, 'opt'], ['ma_median_wage', 'Median wage', 1, 'opt'], ['bachelors_plus_pct', 'Bachelor’s+', 1, 'opt'], ['years_behind_software', 'Years behind software', 1, 'opt']];
 let boardInit = false, boardSeq = 0, boardState = {quadrant: GAP, family: '', q: '', sort: 'ma_employment', dir: 'desc'};
 function boardHash(s) {
   const p = new URLSearchParams();
@@ -357,7 +457,7 @@ async function renderBoard(params) {
   const frag = document.createDocumentFragment();
   d.rows.forEach(o => frag.append(h('tr', {tabindex: '0', onclick: () => go(o.soc), onkeydown: e => { if (e.key === 'Enter') go(o.soc); }},
     h('td', {class: 'title'}, h('span', {class: 'q ' + QCLASS(o.quadrant), title: o.quadrant, 'aria-hidden': 'true'}), o.title), h('td', {class: 'n'}, fmtN(o.ma_employment)), h('td', {class: 'n'}, o.exposure == null ? '—' : o.exposure.toFixed(1)), h('td', {class: 'n'}, fmtP(o.ma_ai_2025)),
-    h('td', {class: 'n opt'}, fmtP(o.us_ai_2025)), h('td', {class: 'n opt'}, fmtW(o.ma_median_wage)), h('td', {class: 'n opt'}, o.bachelors_plus_pct == null ? '—' : Math.round(o.bachelors_plus_pct) + '%'))));
+    h('td', {class: 'n opt'}, fmtP(o.us_ai_2025)), h('td', {class: 'n opt'}, fmtW(o.ma_median_wage)), h('td', {class: 'n opt'}, o.bachelors_plus_pct == null ? '—' : Math.round(o.bachelors_plus_pct) + '%'), h('td', {class: 'n opt'}, fmtYB(o)))));
   tb.append(frag);
 }
 
