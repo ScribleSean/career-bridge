@@ -25,8 +25,8 @@ The page works with `atlas.json` alone. If `careerbridge.json` is present it add
 
 ## Quick start (open-data build)
 
-1. In the `sgi_analysis` repo, produce the analysis outputs: `python -I analysis/career_plan.py` (writes `occupation_risk.csv` and `career_plans.json`; also needs `job_title_index.csv` from `occupation_risk.py`).
-2. Here: `python pipeline/atlas.py` writes `data/atlas.json` and `data/titles.json`. Needs pandas. Defaults: `ATLAS_SRC=../sgi_analysis/analysis`, `SGI_DATA` = `./sgi_dataset` or `../sgi_analysis/sgi_dataset`.
+1. Put the event data folder at `sgi_dataset/` (or set `SGI_DATA`). The analysis outputs the page needs are already in `pipeline/atlas_src/`.
+2. `python pipeline/atlas.py` writes `data/atlas.json` and `data/titles.json`. Needs pandas.
 3. `python server.py` and open http://localhost:8000 (`./demo.sh` does steps 2 to 3 and opens the browser).
 
 **Private build:** put the event data folder (with `anthropic/`, `lightcast/`, `oews/`, `onet/`) at `sgi_dataset/` or set `SGI_DATA`, then `python pipeline/build.py` (and optionally `python pipeline/growth.py`). It writes `data/careerbridge.json`; see `CONTRACT.md`.

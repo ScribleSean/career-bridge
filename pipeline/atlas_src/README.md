@@ -1,0 +1,11 @@
+# Analysis outputs used by `pipeline/atlas.py`
+
+Precomputed from open data only (BLS OEWS, O*NET 31.0, Anthropic Economic Index, June 2026). No Lightcast data is in these files.
+
+| File | What it holds |
+|---|---|
+| `occupation_risk.csv` | one row per occupation: Claude-use score, past growth, group handoff share, tier, 2031 scenario numbers |
+| `career_plans.json` | one plan per occupation: suggested approach, activities to lean into or hand to Claude, similar roles with skills to build, timeline |
+| `job_title_index.csv` | reported job titles mapped to occupation codes, for search |
+
+They were made by `analysis/occupation_risk.py` and `analysis/career_plan.py` in the `sgi_analysis` repo (`python -I analysis/career_plan.py`). To use newly generated copies without overwriting these, run `ATLAS_SRC=/path/to/analysis python pipeline/atlas.py`.

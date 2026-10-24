@@ -1,9 +1,9 @@
 """Open-data layer: sgi_analysis outputs + OEWS + AEI -> data/atlas.json and data/titles.json.
 
 Run:  python pipeline/atlas.py
-Needs (run first, in the sgi_analysis repo):  python -I analysis/career_plan.py
-  ATLAS_SRC   folder holding occupation_risk.csv, career_plans.json, job_title_index.csv
-              (default ../sgi_analysis/analysis)
+Inputs: occupation_risk.csv, career_plans.json and job_title_index.csv. They are committed in pipeline/atlas_src/
+(see the README there for how they were made). To use freshly regenerated ones, set
+  ATLAS_SRC   folder holding those three files (default pipeline/atlas_src)
   SGI_DATA    event data folder with oews/ and anthropic/ (default ./sgi_dataset, else ../sgi_analysis/sgi_dataset)
 
 Everything here comes from BLS OEWS, O*NET and the Anthropic Economic Index, so atlas.json can be hosted
@@ -19,7 +19,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parent.parent
 SIB = REPO.parent / "sgi_analysis"
-SRC = Path(os.environ.get("ATLAS_SRC", SIB / "analysis"))
+SRC = Path(os.environ.get("ATLAS_SRC", REPO / "pipeline" / "atlas_src"))
 DATA = Path(os.environ.get("SGI_DATA", REPO / "sgi_dataset" if (REPO / "sgi_dataset").exists() else SIB / "sgi_dataset"))
 OUT = REPO / "data"
 
