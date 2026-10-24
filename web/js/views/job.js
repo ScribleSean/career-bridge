@@ -1,7 +1,7 @@
 // One job: Lightcast standing and panels first (private builds, when careerbridge.json is loaded), then Claude use,
 // the career plan, and the 2031 what-if. Design rule: no subtitles, footnotes or helper text; titles, scales and
 // source tags carry the meaning, and explanations live on the About page.
-import {h, fmt, announce, src} from '../util.js';
+import {h, fmt, announce, src, experimental} from '../util.js';
 import {lineChart, barList} from '../charts.js';
 import {trendJobs, pathJobs, jobs2031, presetOf} from '../scenario.js';
 
@@ -130,7 +130,7 @@ function scenarioPanel(ctx, o) {
   }
   for (const s of Object.values(sliders)) { s.input.addEventListener('input', () => update(false)); s.input.addEventListener('change', () => update(true)); }
   update(false);
-  return panel('What if: jobs in 2031',
+  return panel('What if: jobs in 2031', experimental(),
     h('div', {class: 'segs', role: 'group', 'aria-label': 'How fast AI spreads'}, presetBtns),
     big, chartBox, stats,
     fold('Set your own numbers', h('div', {class: 'sliders'}, aRow, pRow)));

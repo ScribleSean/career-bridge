@@ -312,3 +312,4 @@ th .srcs { display: flex; margin-top: 4px; font-weight: 400; }
   .qgrid { grid-template-columns: 1fr; grid-template-areas: "r1" "a" "b" "r2" "c" "d"; }
   .qcol { display: none; }
 }
+.warn { margin: 0; padding: 10px 14px; border-left: 6px solid #B7791F; background: #FFF6E0; border-radius: var(--r-sm); font-size: 1rem; max-width: 60ch; }

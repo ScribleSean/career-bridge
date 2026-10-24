@@ -1,5 +1,5 @@
 // Explore: every job on one chart, a group-by-group outlook, and a sortable table with the same data.
-import {h, fmt, announce, src} from '../util.js';
+import {h, fmt, announce, src, experimental} from '../util.js';
 import {scatter} from '../charts.js';
 import {jobs2031, trendJobs, byGroup, presetOf, totals} from '../scenario.js';
 import {jobsOf} from '../data.js';
@@ -104,7 +104,7 @@ export function renderExplore(root, ctx, params) {
         h('div', {class: 'ctlrow'},
           select('ex-x', 'Horizontal', Object.entries(X).filter(([, v]) => !v.full || model.full).map(([k, v]) => [k, v.label]), xk, 'x'),
           select('ex-y', 'Vertical', Object.entries(Y).map(([k, v]) => [k, v.label]), yk, 'y')))),
-    h('section', {class: 'panel'}, h('h3', {}, 'What if: 2031 change vs recent trend, by kind of work'), src('oewsh', 'aei', 'onet'),
+    h('section', {class: 'panel'}, h('h3', {}, 'What if: 2031 change vs recent trend, by kind of work'), src('oewsh', 'aei', 'onet'), experimental(),
       h('div', {class: 'glegend', 'aria-hidden': 'true'}, h('span', {}, h('i', {class: 'dotm'}), 'Selected speed'), h('span', {}, h('i', {class: 'whisk'}), 'Fast to slow'), h('span', {}, h('i', {class: 'zero'}), '0%')), outlook),
     h('section', {class: 'panel'}, h('h3', {}, 'Every job'), src(...(model.full ? ['oewsh', 'aei', 'onet', 'lc'] : ['oewsh', 'aei', 'onet'])), h('p', {class: 'count'}, `${sel.length} jobs · ${fmt.n(total)} workers · circle size = workers`), chartWrap),
     h('section', {class: 'panel'}, h('h3', {}, 'Table'), tbl)));

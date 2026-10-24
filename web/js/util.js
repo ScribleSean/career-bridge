@@ -58,6 +58,8 @@ export function announce(msg) {
 const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['BLS OEWS 2019–2025', ''], onet: ['O*NET 31.0', ''], aei: ['Anthropic Economic Index', '']};
 export const src = (...keys) => h('span', {class: 'srcs'}, h('span', {class: 'sr'}, 'Source: '), keys.map((k) => h('span', {class: ('src ' + SRC[k][1]).trim()}, SRC[k][0])));
 
+/** Marks a what-if model as experimental: shown on every 2031 projection. */
+export const experimental = () => h('p', {class: 'warn'}, h('b', {}, 'Experimental.'), ' A what-if, not a forecast. It hasn’t been checked against what actually happened to jobs.');
 export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const loading = (msg) => h('div', {class: 'status', role: 'status'}, h('div', {class: 'spinner', 'aria-hidden': 'true'}), h('span', {}, msg));
