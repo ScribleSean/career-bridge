@@ -54,6 +54,10 @@ export function announce(msg) {
   announceTimer = setTimeout(() => { el.textContent = ''; el.textContent = msg; }, 150);
 }
 
+/** Source tags: every figure names where it comes from. Lightcast is the core dataset, so its tag is highlighted. */
+const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['BLS OEWS 2019–2025', ''], onet: ['O*NET 31.0', ''], aei: ['Anthropic Economic Index', '']};
+export const src = (...keys) => h('span', {class: 'srcs'}, h('span', {class: 'sr'}, 'Source: '), keys.map((k) => h('span', {class: ('src ' + SRC[k][1]).trim()}, SRC[k][0])));
+
 export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const loading = (msg) => h('div', {class: 'status', role: 'status'}, h('div', {class: 'spinner', 'aria-hidden': 'true'}), h('span', {}, msg));

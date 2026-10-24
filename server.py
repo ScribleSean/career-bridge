@@ -22,10 +22,12 @@ LOHI = "Lower exposure, high adoption"
 LOLO = "Lower exposure, low adoption"
 THIN = "Too few MA job ads to measure"
 QUADRANTS = [GAP, HIHI, LOHI, LOLO, THIN]
+SILENT = "Silent gap"  # board filter: subset of GAP where under 1% of MA ads ask for AI
 
 DEFAULT_META = {
     "state_rate_2025": 6.18,
-    "exposure_median": 55.7,
+    "exposure_cut": 50.0,   # Lightcast AI_EXPOSURE_BAND: Medium-high starts at 50
+    "silent_cut": 1.0,
     "exposure_min": 31.5,
     "exposure_max": 82.8,
     "sources": [
@@ -57,7 +59,7 @@ SOC_RE = re.compile(r"^\d{2}-\d{4}$")
 BOARD_SORT_KEYS = {"title", "ma_employment", "exposure", "ma_ai_2025", "us_ai_2025",
                    "ma_median_wage", "bachelors_plus_pct", "major_group", "claude_share_us",
                    "years_behind_software"}
-SUMMARY_FIELDS = ("soc", "title", "major_group", "ma_employment", "exposure", "ma_ai_2025", "quadrant")
+SUMMARY_FIELDS = ("soc", "title", "major_group", "ma_employment", "exposure", "ma_ai_2025", "quadrant", "silent_gap")
 BOARD_FIELDS = SUMMARY_FIELDS + ("us_ai_2025", "ma_median_wage", "bachelors_plus_pct", "ma_confidence",
                                    "years_behind_software", "software_path_status")
 
@@ -94,6 +96,11 @@ class Store:
         self.paths = d.get("paths", {})
         meta = dict(DEFAULT_META)
         meta.update(d.get("meta") or {})
+        for o in self.occ:  # older data files lack the field: derive it with the contract rule
+            if "silent_gap" not in o:
+                o["silent_gap"] = bool(o.get("ma_confidence") != "THIN" and o.get("ma_ai_2025") is not None
+                                       and (o.get("exposure") or 0) > meta["exposure_cut"]
+                                       and o["ma_ai_2025"] < meta["silent_cut"])
         exps = [o["exposure"] for o in self.occ if o.get("exposure") is not None]
         if "exposure_min" not in (d.get("meta") or {}) and exps:
             meta["exposure_min"] = min(DEFAULT_META["exposure_min"], min(exps))
@@ -110,10 +117,15 @@ class Store:
         total = sum(o.get("ma_employment") or 0 for o in self.occ)
         gap = [o for o in self.occ if o.get("quadrant") == GAP]
         w = sum(o.get("ma_employment") or 0 for o in gap)
+        silent = [o for o in self.occ if o.get("silent_gap")]
+        sw = sum(o.get("ma_employment") or 0 for o in silent)
         return {
             "gap_workers": w,
             "gap_share": round(100.0 * w / total, 1) if total else 0.0,
             "gap_count": len(gap),
+            "silent_workers": sw,
+            "silent_share": round(100.0 * sw / total, 1) if total else 0.0,
+            "silent_count": len(silent),
             "state_rate": self.meta["state_rate_2025"],
             "total_workers": total,
             "total_count": len(self.occ),
@@ -213,7 +225,10 @@ class Store:
             direction = "asc" if sort in ("title", "major_group") else "desc"
         rows = []
         for o in self.occ:
-            if quadrant and quadrant not in ("all", "All jobs") and o.get("quadrant") != quadrant:
+            if quadrant == SILENT:
+                if not o.get("silent_gap"):
+                    continue
+            elif quadrant and quadrant not in ("all", "All jobs") and o.get("quadrant") != quadrant:
                 continue
             if family and o.get("major_group") != family:
                 continue

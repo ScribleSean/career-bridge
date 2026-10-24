@@ -29,7 +29,8 @@ REPO = HERE.parent  # repo root
 DATA = Path(os.environ.get("SGI_DATA", REPO / "sgi_dataset"))
 OUT = HERE.parent / "data" / "careerbridge.json"
 
-EXPOSURE_CUT = 55.7          # contract: exposure > 55.7 = high
+EXPOSURE_CUT = 50.0          # contract: exposure > 50 = high (Lightcast AI_EXPOSURE_BAND Medium-high or High)
+SILENT_CUT = 1.0             # contract: silent gap = high exposure and MA ads asking for AI < 1% (2025, not THIN)
 YEAR = 2025
 TREND_YEARS = [2023, 2024, 2025, 2026]
 BACHELORS_PLUS = range(6, 13)  # O*NET RL categories 6-12: bachelor's .. post-doctoral
@@ -278,6 +279,12 @@ def quadrant(exposure, ma_ai, conf, rate):
     return LABELS[(exposure > EXPOSURE_CUT, ma_ai >= rate)]
 
 
+def silent_gap(exposure, ma_ai, conf):
+    if conf == "THIN" or ma_ai is None or pd.isna(ma_ai):
+        return False
+    return bool(exposure > EXPOSURE_CUT and ma_ai < SILENT_CUT)
+
+
 def wmedian(v, w):
     order = np.argsort(v)
     v, w = np.asarray(v)[order], np.asarray(w)[order]
@@ -319,6 +326,7 @@ def build():
     rates = ["ma_ai_2025", "us_ai_2025", "ma_genai_2025"]
     occ[rates] = occ[rates].astype(float).round(2)  # rules compare the published (rounded) values
     occ["quadrant"] = [quadrant(r.exposure, r.ma_ai_2025, r.ma_confidence, rate) for r in occ.itertuples()]
+    occ["silent_gap"] = [silent_gap(r.exposure, r.ma_ai_2025, r.ma_confidence) for r in occ.itertuples()]
 
     vec = skill_vectors(d["onet_skills"], xw)
     vec = vec[vec.index.isin(socs)]
@@ -343,7 +351,7 @@ def build():
         rec.update(ma_ai_2025=num(r["ma_ai_2025"]), us_ai_2025=num(r["us_ai_2025"]),
                    ma_genai_2025=num(r["ma_genai_2025"]), ma_confidence=r["ma_confidence"],
                    ma_employment=r["ma_employment"], ma_median_wage=num(r["ma_median_wage"], 0),
-                   us_median_wage=num(r["us_median_wage"], 0), quadrant=r["quadrant"],
+                   us_median_wage=num(r["us_median_wage"], 0), quadrant=r["quadrant"], silent_gap=bool(r["silent_gap"]),
                    bachelors_plus_pct=num(r["bachelors_plus_pct"], 1), job_zone=num(r["job_zone"], 0),
                    claude_share_us=num(r["claude_share_us"], 3))
         us26 = {row[0]: row[2] for row in genai.get(r["soc"], [])}.get(TREND_YEARS[-1])
@@ -359,8 +367,8 @@ def build():
         "meta": {
             "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "state_rate_2025": rate,
-            "exposure_median": EXPOSURE_CUT,
-            "exposure_median_computed": round(wmedian(occ.exposure, occ.ma_employment), 1),
+            "exposure_cut": EXPOSURE_CUT,      # Lightcast band: Medium-high starts at 50
+            "silent_cut": SILENT_CUT,
             "software_genai_us": soft,
             "ma_growth": growth.get("meta", {}),
             "sources": [
@@ -402,9 +410,13 @@ def summarize(res):
     occ = pd.DataFrame(res["occ"])
     print(f"occupations: {len(occ)}  MA workers: {occ.ma_employment.sum():,.0f}")
     print(f"state rate 2025: {res['meta']['state_rate_2025']}  exposure cut: {EXPOSURE_CUT} "
-          f"(MA-employment median here: {res['meta']['exposure_median_computed']})")
+          f"(MA-employment median, not used: {wmedian(occ.exposure, occ.ma_employment):.1f})")
     q = occ.groupby("quadrant").agg(occupations=("soc", "size"), ma_workers=("ma_employment", "sum"))
     print(q.to_string())
+    total = occ.ma_employment.sum()
+    for name, m in (("broad gap", occ.quadrant == LABELS[(True, False)]), ("silent gap", occ.silent_gap)):
+        w = occ.ma_employment[m].sum()
+        print(f"{name}: {int(m.sum())} jobs, {w:,.0f} MA workers ({100 * w / total:.1f}%)")
     print({k: len(res[k]) for k in ("trend", "genai", "tasks", "skills", "strengths", "paths")})
     print("software GenAI US:", res["meta"]["software_genai_us"])
     print(occ.software_path_status.value_counts().to_dict())

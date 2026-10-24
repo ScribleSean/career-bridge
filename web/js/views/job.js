@@ -1,7 +1,7 @@
 // One job, in plain words: the short answer, how much AI shows up in the work, what could change by 2031
 // (live sliders), and a career plan. The numbers behind it sit in a fold-out. Lightcast panels render only
 // when careerbridge.json is loaded (private builds).
-import {h, fmt, announce} from '../util.js';
+import {h, fmt, announce, src} from '../util.js';
 import {lineChart} from '../charts.js';
 import {trendJobs, pathJobs, jobs2031, presetOf} from '../scenario.js';
 
@@ -21,7 +21,10 @@ const QTEXT = {
   [LOLO]: 'Less of this work overlaps with what AI can do today, and employers rarely ask for AI skills.',
 };
 
-const panel = (title, sub, ...kids) => h('section', {class: 'panel'}, h('h3', {}, title), sub ? h('p', {class: 'sub'}, sub) : null, ...kids);
+const SOURCES = {'How much does AI show up in this work?': ['aei', 'onet', 'oews'], 'What could happen by 2031?': ['oewsh', 'aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
+  'Job ads asking for AI skills': ['lc'], 'Is this job following software?': ['lc'], 'Job growth in Massachusetts': ['oewsh'],
+  'What people use AI for in this job': ['aei', 'onet', 'lc'], 'Your human edge and what employers ask for': ['lc', 'onet']};
+const panel = (title, sub, ...kids) => h('section', {class: 'panel'}, h('h3', {}, title), sub ? h('p', {class: 'sub'}, sub) : null, SOURCES[title] ? src(...SOURCES[title]) : null, ...kids);
 const tags = (arr) => h('div', {class: 'tags'}, arr.map((s) => h('span', {class: 'tag'}, s)));
 const bare = (s) => s.replace(/^(Knowledge|Work Activities|Abilities): /, '');
 const fold = (summary, ...kids) => h('details', {class: 'more'}, h('summary', {}, summary), h('div', {class: 'morebody'}, ...kids));
@@ -34,14 +37,15 @@ function header(ctx, o) {
   return h('header', {class: 'occhead'},
     h('span', {class: 'grp'}, o.group),
     h('h2', {id: 'occ-title', tabindex: '-1'}, o.title),
-    h('div', {class: 'verdict ' + cls}, h('span', {class: 'v-label'}, label), h('p', {}, line)),
+    h('div', {class: 'verdict ' + cls}, h('span', {class: 'v-label'}, label), h('p', {}, line),
+      o.lc?.silent_gap ? h('p', {}, `Few employers here are asking for AI skills yet (under ${ctx.model.lcMeta?.silent_cut ?? 1}% of Massachusetts job ads), so you may not hear about changes early. Start asking around now.`) : null),
     h('dl', {class: 'facts'},
-      fact('People doing this job', fmt.n(o.jobs), ctx.state.geo === 'MA' ? 'in Massachusetts, 2025' : 'in the U.S., 2025'),
-      fact('Typical pay', fmt.usd(o.wage), 'a year, before benefits'),
-      fact('Lately', trend, `${fmt.signed(o.g)} a year, 2019 to 2025`),
-      fact('Usual training', o.prep ? o.prep.replace(/^./, (c) => c.toUpperCase()) : '—', o.edu ? `Most often: ${o.edu}` : '', true)));
+      fact('People doing this job', fmt.n(o.jobs), ctx.state.geo === 'MA' ? 'in Massachusetts, 2025' : 'in the U.S., 2025', false, 'oews'),
+      fact('Typical pay', fmt.usd(o.wage), 'a year, before benefits', false, 'oews'),
+      fact('Lately', trend, `${fmt.signed(o.g)} a year, 2019 to 2025`, false, 'oewsh'),
+      fact('Usual training', o.prep ? o.prep.replace(/^./, (c) => c.toUpperCase()) : '—', o.edu ? `Most often: ${o.edu}` : '', true, 'onet')));
 }
-const fact = (k, v, n, text) => h('div', {class: 'fact' + (text ? ' text' : '')}, h('dt', {}, k), h('dd', {}, h('span', {class: 'fv'}, v), n ? h('small', {}, n) : null));
+const fact = (k, v, n, text, s) => h('div', {class: 'fact' + (text ? ' text' : '')}, h('dt', {}, k), h('dd', {}, h('span', {class: 'fv'}, v), n ? h('small', {}, n) : null, s ? src(s) : null));
 
 /** One ruler: where this job falls between the lowest and the highest of all jobs. */
 function ruler(cls, shape, label, src, pct, value, explain) {
@@ -82,6 +86,7 @@ function details(ctx, o, plan) {
         ruler('ads', 'diamond', 'Employers asking for AI skills', 'Lightcast', o.demandPct,
           r == null ? 'Too few Massachusetts job ads to measure' : `${fmt.pct(r)} of Massachusetts job ads, compared with ${ctx.model.lcMeta?.state_rate_2025 ?? 6.18}% across all jobs`)),
       QTEXT[o.lc.quadrant] ? h('p', {class: 'reading'}, QTEXT[o.lc.quadrant]) : null,
+      o.lc.silent_gap ? h('p', {class: 'reading'}, `This is a “silent gap”: under ${ctx.model.lcMeta?.silent_cut ?? 1}% of Massachusetts job ads for this job asked for AI skills in 2025, so workers may get little warning.`) : null,
       o.capPct != null && Math.abs(o.capPct - o.z) >= 30
         ? h('p', {class: 'reading'}, o.capPct > o.z
           ? `These two don’t agree here. AI could do a lot of this work (higher than ${o.capPct} of 100 jobs), but Claude is used on it less (higher than ${Math.round(o.z)} of 100). Work can be a good fit for AI before people start using it that way.`

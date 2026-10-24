@@ -36,6 +36,9 @@ function percentile(values) {
 export function makeModel({atlas, cb}, geo) {
   const cbBy = new Map((cb?.occ || []).map((o) => [o.soc, o]));
   const jobsKey = geo === 'MA' ? 'ma_jobs' : 'us_jobs', wageKey = geo === 'MA' ? 'ma_wage' : 'us_wage';
+  // Older data files lack silent_gap: derive it with the contract rule (same as server.py).
+  const m = cb?.meta || {}, cut = m.exposure_cut ?? 50, silentCut = m.silent_cut ?? 1;
+  for (const o of cb?.occ || []) if (!('silent_gap' in o)) o.silent_gap = o.ma_confidence !== 'THIN' && o.ma_ai_2025 != null && (o.exposure || 0) > cut && o.ma_ai_2025 < silentCut;
   const all = atlas.occ.map((a) => ({...a, jobs: a[jobsKey], wage: a[wageKey], lc: cbBy.get(a.soc) || null}));
   const occ = all.filter((o) => o.jobs != null);
   const capRank = percentile(all.map((o) => o.lc?.exposure));

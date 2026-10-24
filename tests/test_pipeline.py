@@ -12,7 +12,7 @@ BUILT = DATA / "careerbridge.json"
 REF = DATA / "reference_prototype.json"
 
 OCC_KEYS = {"soc", "title", "major_group", "exposure", "ma_ai_2025", "us_ai_2025", "ma_genai_2025",
-            "ma_confidence", "ma_employment", "ma_median_wage", "us_median_wage", "quadrant",
+            "ma_confidence", "ma_employment", "ma_median_wage", "us_median_wage", "quadrant", "silent_gap",
             "bachelors_plus_pct", "job_zone", "claude_share_us",
             "years_behind_software", "software_path_status",
             "ma_growth_pct", "ma_growth_since", "ma_growth_vs_all", "ma_growth_status"}
@@ -48,7 +48,7 @@ class TestCareerBridge(unittest.TestCase):
         self.assertEqual(series[2025], rn["ma_employment"])  # 2025 matches the OEWS May 2025 file
         for o in self.d["occ"]:
             self.assertIn(o["ma_growth_status"], {"faster", "slower", "similar", "too_little_data"})
-        for k in ("built_at", "state_rate_2025", "exposure_median", "sources"):
+        for k in ("built_at", "state_rate_2025", "exposure_cut", "silent_cut", "sources"):
             self.assertIn(k, self.d["meta"])
         for o in self.d["occ"]:
             self.assertEqual(set(o), OCC_KEYS, o["soc"])
@@ -79,7 +79,8 @@ class TestCareerBridge(unittest.TestCase):
         self.assertAlmostEqual(self.d["meta"]["state_rate_2025"], 6.18, places=2)
 
     def test_quadrants(self):
-        rate, cut = self.d["meta"]["state_rate_2025"], 55.7
+        rate, cut = self.d["meta"]["state_rate_2025"], 50
+        self.assertEqual(self.d["meta"]["exposure_cut"], 50)
         for o in self.d["occ"]:
             q = o["quadrant"]
             self.assertIn(q, QUADRANTS)
@@ -89,6 +90,34 @@ class TestCareerBridge(unittest.TestCase):
             high_exp, high_ad = o["exposure"] > cut, o["ma_ai_2025"] >= rate
             self.assertEqual(q.startswith("High exposure"), high_exp, o["soc"])
             self.assertEqual(q.endswith("high adoption"), high_ad, o["soc"])
+
+    def test_silent_gap(self):
+        self.assertEqual(self.d["meta"]["silent_cut"], 1)
+        for o in self.d["occ"]:
+            want = (o["ma_confidence"] != "THIN" and o["ma_ai_2025"] is not None
+                    and o["exposure"] > 50 and o["ma_ai_2025"] < 1)
+            self.assertIs(o["silent_gap"], want, o["soc"])
+            if want:
+                self.assertEqual(o["quadrant"], "High exposure, low adoption", o["soc"])
+
+    def test_group_counts(self):
+        occ = self.d["occ"]
+        total = sum(o["ma_employment"] for o in occ)
+        gap = [o for o in occ if o["quadrant"] == "High exposure, low adoption"]
+        silent = [o for o in occ if o["silent_gap"]]
+        self.assertEqual(len(occ), 659)
+        self.assertEqual(total, 3568980)
+        self.assertEqual(len(gap), 256)
+        self.assertEqual(sum(o["ma_employment"] for o in gap), 1515420)
+        self.assertEqual(len(silent), 99)
+        self.assertEqual(sum(o["ma_employment"] for o in silent), 525540)
+        self.assertAlmostEqual(100 * 525540 / total, 14.7, places=1)
+
+    def test_nurses_silent_gap(self):
+        o = self.occ["29-1141"]
+        self.assertGreater(o["exposure"], 50)
+        self.assertEqual(o["quadrant"], "High exposure, low adoption")
+        self.assertTrue(o["silent_gap"])
 
     def test_thin_rates_blank(self):
         for o in self.d["occ"]:
@@ -174,6 +203,8 @@ class TestCareerBridge(unittest.TestCase):
             mo = self.occ[soc]
             for k in ("exposure", "ma_ai_2025", "ma_employment", "quadrant", "ma_confidence"):
                 a, b = mo[k], ro[k]
+                if k == "quadrant" and b.startswith("Lower exposure") and 50 < ro["exposure"] <= 55.7:
+                    b = b.replace("Lower exposure", "High exposure")  # reference used the old 55.7 cut
                 bad = (a != b) if isinstance(a, str) or a is None or b is None else abs(a - b) > 0.5
                 if bad:
                     differ.setdefault(k, []).append(soc)

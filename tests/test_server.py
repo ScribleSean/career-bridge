@@ -57,7 +57,9 @@ class ServerTest(unittest.TestCase):
         self.assertTrue(m["using_reference"])
         self.assertIn("warning", m)
         self.assertEqual(m["state_rate_2025"], 6.18)
-        self.assertEqual(m["exposure_median"], 55.7)
+        self.assertEqual(m["exposure_cut"], 50)
+        self.assertEqual(m["silent_cut"], 1)
+        self.assertNotIn("exposure_median", m)
         self.assertGreater(m["counts"]["occ"], 500)
         self.assertIn("Office and Administrative Support", m["families"])
 
@@ -65,7 +67,7 @@ class ServerTest(unittest.TestCase):
     def test_search_shape(self):
         rows = self.json("/api/occupations?q=secretar")
         self.assertTrue(rows)
-        self.assertEqual(set(rows[0]), {"soc", "title", "major_group", "ma_employment", "exposure", "ma_ai_2025", "quadrant"})
+        self.assertEqual(set(rows[0]), {"soc", "title", "major_group", "ma_employment", "exposure", "ma_ai_2025", "quadrant", "silent_gap"})
         emp = [r["ma_employment"] for r in rows]
         self.assertEqual(emp, sorted(emp, reverse=True))
 
@@ -122,7 +124,7 @@ class ServerTest(unittest.TestCase):
         b = self.json("/api/board")
         self.assertEqual(b["count"], len(b["rows"]))
         s = b["summary"]
-        for k in ("gap_workers", "gap_share", "gap_count", "state_rate"):
+        for k in ("gap_workers", "gap_share", "gap_count", "silent_workers", "silent_share", "silent_count", "state_rate"):
             self.assertIn(k, s)
         self.assertGreater(s["gap_count"], 0)
         emp = [r["ma_employment"] for r in b["rows"]]
@@ -138,6 +140,10 @@ class ServerTest(unittest.TestCase):
         b = self.json("/api/board?family=" + quote(fam) + "&q=clerk")
         self.assertTrue(b["rows"])
         self.assertTrue(all("clerk" in r["title"].lower() for r in b["rows"]))
+        b = self.json("/api/board?quadrant=" + quote("Silent gap"))
+        self.assertEqual(b["count"], b["summary"]["silent_count"])
+        self.assertEqual(b["workers"], b["summary"]["silent_workers"])
+        self.assertTrue(all(r["silent_gap"] and r["exposure"] > 50 and r["ma_ai_2025"] < 1 for r in b["rows"]))
         b = self.json("/api/board?quadrant=" + quote("No such group"))
         self.assertEqual(b["rows"], [])
 

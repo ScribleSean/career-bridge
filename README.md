@@ -19,6 +19,8 @@ Written in plain language for people who aren't data experts: light colors, larg
 | Panels | Claude use ruler, scenarios, career plan, Explore | adds the two Lightcast rulers, job-ad trends, software's path, MA growth, board |
 | Can be hosted publicly | yes | **no**: Lightcast is licensed for the challenge |
 
+**How the groups work (private build).** High exposure means a Lightcast exposure index above 50, where Lightcast's Medium-high and High bands start. High employer demand means at least 6.18% of Massachusetts job ads ask for AI skills (the 2025 state rate). The broad gap is high exposure with demand below that rate. The silent gap is the stricter part of it, where under 1% of MA job ads ask for AI skills.
+
 The page works with `atlas.json` alone. If `careerbridge.json` is present it adds the Lightcast panels. `data/` is gitignored; never commit Lightcast-derived files, because this repository is public.
 
 ## Quick start (open-data build)

@@ -1,5 +1,5 @@
 // Explore: every job on one chart, a group-by-group outlook, and a sortable table with the same data.
-import {h, fmt, announce} from '../util.js';
+import {h, fmt, announce, src} from '../util.js';
 import {scatter} from '../charts.js';
 import {jobs2031, trendJobs, byGroup, presetOf, totals} from '../scenario.js';
 import {jobsOf} from '../data.js';
@@ -106,8 +106,8 @@ export function renderExplore(root, ctx, params) {
           select('ex-x', 'Across the bottom', Object.entries(X).filter(([, v]) => !v.full || model.full).map(([k, v]) => [k, v.label]), xk, 'x'),
           select('ex-y', 'Up the side', Object.entries(Y).map(([k, v]) => [k, v.label]), yk, 'y')))),
     h('section', {class: 'panel'}, h('h3', {}, 'Which kinds of work could change the most?'),
-      h('p', {class: 'sub'}, 'The dot shows where each kind of work could end up by 2031, compared with recent trends. The line runs from fast to slow AI spread. Click a row to show only that kind of work.'), outlook),
-    h('section', {class: 'panel'}, h('h3', {}, 'Every job in one picture'), h('p', {class: 'sub'}, summary), chartWrap,
+      h('p', {class: 'sub'}, 'The dot shows where each kind of work could end up by 2031, compared with recent trends. The line runs from fast to slow AI spread. Click a row to show only that kind of work.'), src('oewsh', 'aei', 'onet'), outlook),
+    h('section', {class: 'panel'}, h('h3', {}, 'Every job in one picture'), h('p', {class: 'sub'}, summary), src(...(model.full ? ['oewsh', 'aei', 'onet', 'lc'] : ['oewsh', 'aei', 'onet'])), chartWrap,
       h('p', {class: 'foot'}, 'Bigger circles mean more people. Colors match our suggestion for each job. Growth is capped at the extremes, so some circles line up along a flat edge. Hover or tap a circle to see the job. The table below has the same information.')),
     h('section', {class: 'panel'}, h('h3', {}, 'The same thing as a table'), h('p', {class: 'sub'}, 'Every job in your selection. Click a heading to sort.'), tbl)));
   draw();
