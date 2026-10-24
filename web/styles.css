@@ -41,6 +41,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .85rem; padding: 4px 10px; border-radius: 999px; }
 .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .pill.gap { background: var(--gap-soft); color: var(--gap); }
+.pill.silent { box-shadow: inset 0 0 0 1.5px var(--gap); }
 .pill.ai { background: var(--ai-soft); color: var(--ai); }
 .pill.neutral { background: var(--neutral-soft); color: var(--muted); }
 .verdict p { margin: 0; max-width: 70ch; }
@@ -105,6 +106,7 @@ tbody tr:hover { background: var(--ai-soft); }
 .meterscale span { position: absolute; top: 0; white-space: nowrap; }
 .meterscale .lo { left: 0; } .meterscale .hi { right: 0; }
 .meterscale .md { transform: translateX(-50%); color: var(--gap); font-weight: 600; }
+.mdnote { display: block; font-size: .72rem; color: var(--gap); font-weight: 600; }
 .headrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .themebtn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; width: 36px; height: 36px; cursor: pointer; font-size: 1rem; line-height: 1; }
 .themebtn:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }

@@ -4,28 +4,33 @@
 
 const GAP = 'High exposure, low adoption';
 const QUADRANTS = [GAP, 'High exposure, high adoption', 'Lower exposure, high adoption', 'Lower exposure, low adoption', 'Too few MA job ads to measure'];
+const SILENT = 'Silent gap';  // board filter: subset of GAP where under 1% of MA ads ask for AI
 const DEFAULT_META = {
-  state_rate_2025: 6.18, exposure_median: 55.7, exposure_min: 31.5, exposure_max: 82.8,
+  state_rate_2025: 6.18, exposure_cut: 50, silent_cut: 1, exposure_min: 31.5, exposure_max: 82.8,
   sources: ['Data Source: Lightcast, 2026 (AI Exposure and Adoption by Occupation, 2023-Sep 2026)', 'BLS OEWS May 2025', 'O*NET 31.0', 'Anthropic Economic Index, June 2026 release'],
 };
 const ALIASES = {rn: 'registered nurses', admin: 'administrative', cna: 'nursing assistants', cs: 'customer service', hr: 'human resources', it: 'computer', dev: 'developers', devs: 'developers', teacher: 'teachers', nurse: 'nurses', rep: 'representatives', reps: 'representatives'};
 const SORT_KEYS = new Set(['title', 'ma_employment', 'exposure', 'ma_ai_2025', 'us_ai_2025', 'ma_median_wage', 'bachelors_plus_pct', 'major_group', 'claude_share_us', 'years_behind_software']);
-const SUMMARY = ['soc', 'title', 'major_group', 'ma_employment', 'exposure', 'ma_ai_2025', 'quadrant'];
+const SUMMARY = ['soc', 'title', 'major_group', 'ma_employment', 'exposure', 'ma_ai_2025', 'quadrant', 'silent_gap'];
 const BOARD = SUMMARY.concat(['us_ai_2025', 'ma_median_wage', 'bachelors_plus_pct', 'ma_confidence', 'years_behind_software', 'software_path_status']);
 const pick = (o, fields) => Object.fromEntries(fields.map(k => [k, o[k] ?? null]));
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function makeStaticApi(d, dataFile = 'careerbridge.json') {
-  const occ = d.occ || [];
-  const bySoc = new Map(occ.map(o => [o.soc, o]));
   const meta = {...DEFAULT_META, ...(d.meta || {})};
+  // Older data files lack silent_gap: derive it with the contract rule (same as server.py).
+  const occ = (d.occ || []).map(o => 'silent_gap' in o ? o : {...o, silent_gap: o.ma_confidence !== 'THIN' && o.ma_ai_2025 != null && (o.exposure || 0) > meta.exposure_cut && o.ma_ai_2025 < meta.silent_cut});
+  const bySoc = new Map(occ.map(o => [o.soc, o]));
   const families = [...new Set(occ.map(o => o.major_group).filter(Boolean))].sort();
   const ranked = [...occ].sort((a, b) => (b.ma_employment || 0) - (a.ma_employment || 0));
   const lower = new Map(occ.map(o => [o.soc, (o.title || '').toLowerCase()]));
   const total = occ.reduce((s, o) => s + (o.ma_employment || 0), 0);
   const gap = occ.filter(o => o.quadrant === GAP);
   const gapW = gap.reduce((s, o) => s + (o.ma_employment || 0), 0);
-  const summary = {gap_workers: gapW, gap_share: total ? Math.round(1000 * gapW / total) / 10 : 0, gap_count: gap.length, state_rate: meta.state_rate_2025, total_workers: total, total_count: occ.length};
+  const silent = occ.filter(o => o.silent_gap);
+  const silentW = silent.reduce((s, o) => s + (o.ma_employment || 0), 0);
+  const summary = {gap_workers: gapW, gap_share: total ? Math.round(1000 * gapW / total) / 10 : 0, gap_count: gap.length,
+    silent_workers: silentW, silent_share: total ? Math.round(1000 * silentW / total) / 10 : 0, silent_count: silent.length, state_rate: meta.state_rate_2025, total_workers: total, total_count: occ.length};
 
   const words = text => (text || '').toLowerCase().split(/\s+/).map(w => w.replace(/[^\w*-]/g, '')).filter(Boolean).flatMap(w => (ALIASES[w] || w).split(' '));
   const match = (title, ws) => ws.every(w => title.includes(w) || (w.length > 4 && title.includes(w.slice(0, -1))));
@@ -71,7 +76,7 @@ export function makeStaticApi(d, dataFile = 'careerbridge.json') {
     if (!SORT_KEYS.has(sort)) sort = 'ma_employment';
     let dir = p.get('dir') || '';
     if (dir !== 'asc' && dir !== 'desc') dir = (sort === 'title' || sort === 'major_group') ? 'asc' : 'desc';
-    const rows = occ.filter(o => (!quadrant || quadrant === 'all' || quadrant === 'All jobs' || o.quadrant === quadrant)
+    const rows = occ.filter(o => (quadrant === SILENT ? o.silent_gap : (!quadrant || quadrant === 'all' || quadrant === 'All jobs' || o.quadrant === quadrant))
       && (!family || o.major_group === family) && ws.every(w => lower.get(o.soc).includes(w)));
     // "Not started" sorts as furthest behind software; "too few ads" stays blank (last). Same as server.py.
     const val = o => (sort === 'years_behind_software' && o.software_path_status === 'not_started') ? 99 : o[sort];

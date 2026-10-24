@@ -2,7 +2,7 @@
 //   #/job/<soc>   worker view for one job      #/board?quadrant=&family=&q=&sort=&dir=
 //   #/about       about the data               #/ (default: last job viewed)
 
-const GAP = 'High exposure, low adoption', HIHI = 'High exposure, high adoption', LOHI = 'Lower exposure, high adoption', LOLO = 'Lower exposure, low adoption', THIN = 'Too few MA job ads to measure';
+const SILENT = 'Silent gap', GAP = 'High exposure, low adoption', HIHI = 'High exposure, high adoption', LOHI = 'Lower exposure, high adoption', LOLO = 'Lower exposure, low adoption', THIN = 'Too few MA job ads to measure';
 const QTEXT = {
   [GAP]: ['gap', 'Much of this work overlaps with what AI can do, but few Massachusetts job ads ask for AI skills yet. Workers here may get little warning or support.'],
   [HIHI]: ['ai', 'Much of this work overlaps with AI, and employers already ask for AI skills in it. Building those skills is part of staying competitive.'],
@@ -15,7 +15,7 @@ const JZ = {1: 'little or no preparation', 2: 'some preparation', 3: 'medium pre
 const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'], ['13-2011', 'Accountant'], ['43-1011', 'Office supervisor'], ['29-1141', 'Registered nurse'], ['15-1252', 'Software developer'], ['11-2021', 'Marketing manager']];
 const DEFAULT_SOC = '43-4051';
 
-let META = {state_rate_2025: 6.18, exposure_median: 55.7, exposure_min: 31.5, exposure_max: 82.8};
+let META = {state_rate_2025: 6.18, exposure_cut: 50, silent_cut: 1, exposure_min: 31.5, exposure_max: 82.8};
 
 const fmtN = n => n == null ? '—' : Math.round(n).toLocaleString('en-US');
 const fmtW = n => n == null ? '—' : '$' + Math.round(n).toLocaleString('en-US');
@@ -169,7 +169,8 @@ async function renderOcc(soc) {
     h('div', {class: 'occhead'},
       h('span', {class: 'grp'}, o.major_group + ' · SOC ' + o.soc),
       h('h2', {id: 'occ-title', tabindex: '-1'}, o.title),
-      h('div', {class: 'verdict'}, h('span', {class: 'pill ' + cls}, o.quadrant), h('p', {}, text)),
+      h('div', {class: 'verdict'}, h('span', {class: 'pill ' + cls}, o.quadrant),
+        o.silent_gap ? h('span', {class: 'pill gap silent'}, `Silent gap: under ${META.silent_cut}% of MA job ads ask for AI skills`) : null, h('p', {}, text)),
       src(['Group: Lightcast exposure + MA job ads 2025', 'lc'])),
     h('div', {class: 'grid'}, panelStand(o, d.trend), panelSoftware(o, d.genai), panelSkills(d), panelMoves(o, d.paths), panelUse(o, d), panelGrowth(o, d.growth))));
   if (shownSoc && shownSoc !== o.soc && root.getBoundingClientRect().top < 0) {
@@ -185,19 +186,20 @@ const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['
 const src = (...keys) => h('span', {class: 'srcs'}, keys.map(k => { const [n, c] = Array.isArray(k) ? k : SRC[k]; return h('span', {class: ('src ' + c).trim(), title: 'Source: ' + n}, n); }));
 
 function meter(x) {
-  const lo = META.exposure_min, hi = META.exposure_max, med = META.exposure_median;
+  const lo = META.exposure_min, hi = META.exposure_max, cut = META.exposure_cut;
   const pos = v => Math.max(0, Math.min(100, 100 * (v - lo) / (hi - lo)));
   return h('div', {class: 'meterwrap'},
-    h('div', {class: 'meter', role: 'img', 'aria-label': `Exposure ${x.toFixed(1)} on a scale from ${lo} (least overlap) to ${hi} (most overlap with AI); median job ${med}`},
-      h('i', {style: `width:${pos(x)}%`}), h('b', {style: `left:${pos(med)}%`})),
+    h('div', {class: 'meter', role: 'img', 'aria-label': `Exposure ${x.toFixed(1)} on a scale from ${lo} (least overlap) to ${hi} (most overlap with AI); Lightcast's Medium-high band starts at ${cut}`},
+      h('i', {style: `width:${pos(x)}%`}), h('b', {style: `left:${pos(cut)}%`})),
     h('div', {class: 'meterscale', 'aria-hidden': 'true'},
-      h('span', {class: 'lo'}, String(lo)), h('span', {class: 'md', style: `left:${pos(med)}%`}, 'median ' + med), h('span', {class: 'hi'}, String(hi))));
+      h('span', {class: 'lo'}, String(lo)), h('span', {class: 'md', style: `left:${pos(cut)}%`}, String(cut)), h('span', {class: 'hi'}, String(hi))),
+    h('span', {class: 'mdnote', 'aria-hidden': 'true'}, `Tick: Medium-high band starts (${cut})`));
 }
 
 function panelStand(o, trend) {
   const tr = (trend || []).filter(r => r[1] != null || r[2] != null);
   const jz = o.job_zone != null ? Math.round(o.job_zone) : null;
-  const rel = o.exposure > META.exposure_median ? 'More exposed than the median job' : 'Less exposed than the median job';
+  const rel = o.exposure > META.exposure_cut ? 'In Lightcast’s Medium-high or High exposure band' : 'Below Lightcast’s Medium-high exposure band';
   return h('div', {class: 'panel'},
     h('h3', {}, 'Where your job stands'),
     h('p', {class: 'sub'}, 'Massachusetts, 2025 unless noted. Each figure names its source.'),
@@ -418,7 +420,7 @@ function setBoard(patch, push = false) {
 function initBoard(meta) {
   boardInit = true;
   const fq = $('fq'), fs = $('fs'), fg = $('fg');
-  [GAP, HIHI, LOHI, LOLO, THIN].forEach(v => fq.append(h('option', {value: v}, v)));
+  [GAP, SILENT, HIHI, LOHI, LOLO, THIN].forEach(v => fq.append(h('option', {value: v}, v === SILENT ? `Silent gap (high exposure, under ${META.silent_cut}% of ads ask for AI)` : v)));
   fq.append(h('option', {value: 'all'}, 'All jobs'));
   fg.append(h('option', {value: ''}, 'All families'));
   (meta.families || []).forEach(g => fg.append(h('option', {value: g}, g)));
@@ -455,12 +457,13 @@ async function renderBoard(params) {
   if (seq !== boardSeq) return;
   const sum = d.summary, sb = $('boardSummary');
   if (!sb.children.length) {
-    [[fmtN(sum.gap_workers), 'MA workers in exposed jobs with little employer demand for AI skills', src(['Groups: Lightcast', 'lc'], ['Workers: BLS OEWS May 2025', ''])],
-     [Math.round(sum.gap_share) + '%', 'of workers in the jobs covered here', src(['Lightcast', 'lc'], ['BLS OEWS', ''])],
-     [String(sum.gap_count), 'occupations in that group', src(['Lightcast', 'lc'])],
+    [[fmtN(sum.gap_workers), `MA workers in exposed jobs with little employer demand for AI skills (${sum.gap_count} jobs)`, src(['Groups: Lightcast', 'lc'], ['Workers: BLS OEWS May 2025', ''])],
+     [fmtP(sum.gap_share), 'of workers in the jobs covered here', src(['Lightcast', 'lc'], ['BLS OEWS May 2025', ''])],
+     [fmtN(sum.silent_workers), `MA workers in the silent gap: under ${META.silent_cut}% of job ads ask for AI skills (${sum.silent_count} jobs)`, src(['Groups: Lightcast', 'lc'], ['Workers: BLS OEWS May 2025', ''])],
+     [fmtP(sum.silent_share), 'of workers in the jobs covered here', src(['Lightcast', 'lc'], ['BLS OEWS May 2025', ''])],
      [fmtP(sum.state_rate, 2), 'of all MA job ads asked for AI skills in 2025', src(['Lightcast job ads 2025', 'lc'])]]
       .forEach(([v, k, s]) => sb.append(h('div', {class: 'panel stat'}, h('span', {class: 'v'}, v), h('span', {class: 'k'}, k), s)));
-    sb.after(h('p', {class: 'foot', id: 'boardSources'}, 'Columns: Exposure, Ads asking AI, US ads asking AI and Where software was come from Lightcast. MA workers and Median wage come from BLS OEWS (May 2025). Bachelor’s+ comes from O*NET 31.0 education data. Groups use Lightcast exposure above 55.7 and MA AI-skill demand at or above the 2025 state rate.'));
+    sb.after(h('p', {class: 'foot', id: 'boardSources'}, 'Columns: Exposure, Ads asking AI, US ads asking AI and Where software was come from Lightcast. MA workers and Median wage come from BLS OEWS (May 2025). Bachelor’s+ comes from O*NET 31.0 education data. Groups use Lightcast exposure above 50 (Lightcast’s Medium-high and High bands) and MA AI-skill demand at or above the 2025 state rate. The silent gap is the part of the exposed, low-demand group where under 1% of MA job ads ask for AI skills.'));
   }
   document.querySelectorAll('#bt th').forEach(th => {
     const on = th.dataset.k === d.sort;

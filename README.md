@@ -8,6 +8,8 @@ Career Bridge shows Massachusetts workers where their job stands with AI: how mu
 
 **How to read "Following software's path?"** It places a job's employer demand for generative-AI skills on the path software took (0.5% of ads in 2023 to 14% in 2026). It is a position, not a timeline: a backtest on 2024–2026 found jobs keep rising once they start (74–90% did), but at about half to four-fifths of software's speed. It says nothing about job losses.
 
+**How to read the groups.** High exposure means a Lightcast exposure index above 50, where Lightcast's Medium-high and High bands start. High employer demand means at least 6.18% of Massachusetts job ads ask for AI skills (the 2025 state rate). The broad gap is high exposure with demand below that rate. The silent gap is the stricter part of it where under 1% of MA job ads ask for AI skills.
+
 ## Quick start
 
 1. Put the event data folder (with `anthropic/`, `lightcast/`, `oews/`, `onet/` inside) at `sgi_dataset/`, or point `SGI_DATA` at it. No data is in this repo.
@@ -26,7 +28,7 @@ Tests: `python -m unittest discover -s tests`
 ## Pages and API
 
 - `#/job/43-6014` one job, `#/board` the workforce-board table (filters and sort are kept in the URL), `#/about` what the measures mean. Back and forward work.
-- `GET /api/meta`, `GET /api/occupations?q=`, `GET /api/occupations/{soc}`, `GET /api/board?quadrant=&family=&q=&sort=&dir=`. See `CONTRACT.md` for the data shape and rules.
+- `GET /api/meta`, `GET /api/occupations?q=`, `GET /api/occupations/{soc}`, `GET /api/board?quadrant=&family=&q=&sort=&dir=` (`quadrant=Silent gap` filters to the silent gap). See `CONTRACT.md` for the data shape and rules.
 - Search understands short forms: rn, admin, cna, cs, hr, it, dev, teacher, nurse.
 
 ## Data and licensing
