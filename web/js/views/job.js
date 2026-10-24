@@ -21,7 +21,7 @@ const QTEXT = {
   [LOLO]: 'Less of this work overlaps with what AI can do today, and employers rarely ask for AI skills.',
 };
 
-const SOURCES = {'How much does AI show up in this work?': ['aei', 'onet', 'oews'], 'What could happen by 2031?': ['oewsh', 'aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
+const SOURCES = {'Where this job stands with AI': ['lc'], 'How much does AI show up in this work?': ['aei', 'onet', 'oews'], 'What could happen by 2031?': ['oewsh', 'aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
   'Job ads asking for AI skills': ['lc'], 'Is this job following software?': ['lc'], 'Job growth in Massachusetts': ['oewsh'],
   'What people use AI for in this job': ['aei', 'onet', 'lc'], 'Your human edge and what employers ask for': ['lc', 'onet']};
 const panel = (title, sub, ...kids) => h('section', {class: 'panel'}, h('h3', {}, title), sub ? h('p', {class: 'sub'}, sub) : null, SOURCES[title] ? src(...SOURCES[title]) : null, ...kids);
@@ -78,9 +78,16 @@ function groupRank(ctx, o) {
 /** Everything a curious person might want, folded away so the page stays calm. */
 function details(ctx, o, plan) {
   const kids = [];
-  if (o.lc) {
-    const r = o.lc.ma_ai_2025;
-    kids.push(h('div', {class: 'stack'}, h('h3', {}, 'Two more ways to look at it'),
+  const g = groupRank(ctx, o);
+  if (g || plan?.why) kids.push(h('div', {class: 'stack'}, h('h3', {}, 'How we got here'), g ? h('p', {}, g) : null, plan?.why ? h('p', {}, 'Nationally, this job ' + plan.why.replace(/^Ranks/, 'ranks')) : null,
+    h('p', {class: 'foot'}, `Job code ${o.soc}. The About page explains the numbers.`)));
+  return fold('See the numbers behind this', ...kids);
+}
+
+/** Lightcast first: where this job stands on AI exposure and employer demand (private build only). */
+function lightcastStanding(ctx, o) {
+  const r = o.lc.ma_ai_2025;
+  return panel('Where this job stands with AI', 'How much of the work overlaps with what AI can do, and how often Massachusetts employers ask for AI skills.',
       h('ul', {class: 'rulers'},
         ruler('cap', 'square', 'What AI could do in this job', 'Lightcast', o.capPct, `Score: ${o.lc.exposure.toFixed(1)}`),
         ruler('ads', 'diamond', 'Employers asking for AI skills', 'Lightcast', o.demandPct,
@@ -90,13 +97,7 @@ function details(ctx, o, plan) {
       o.capPct != null && Math.abs(o.capPct - o.z) >= 30
         ? h('p', {class: 'reading'}, o.capPct > o.z
           ? `These two don’t agree here. AI could do a lot of this work (higher than ${o.capPct} of 100 jobs), but Claude is used on it less (higher than ${Math.round(o.z)} of 100). Work can be a good fit for AI before people start using it that way.`
-          : `These two don’t agree here. Claude is used on this work a lot (higher than ${Math.round(o.z)} of 100 jobs), even though AI could do less of it on paper (higher than ${o.capPct} of 100). People may be using it to help with parts of the job.`) : null));
-  }
-  const g = groupRank(ctx, o);
-  if (g || plan?.why) kids.push(h('div', {class: 'stack'}, h('h3', {}, 'How we got here'), g ? h('p', {}, g) : null, plan?.why ? h('p', {}, 'Nationally, this job ' + plan.why.replace(/^Ranks/, 'ranks')) : null,
-    h('p', {class: 'foot'}, `Job code ${o.soc}. The About page explains the numbers.`)));
-  if (ctx.model.full && o.lc) kids.push(h('div', {class: 'stackp'}, lightcastPanels(ctx, o)));
-  return fold('See the numbers behind this', ...kids);
+          : `These two don’t agree here. Claude is used on this work a lot (higher than ${Math.round(o.z)} of 100 jobs), even though AI could do less of it on paper (higher than ${o.capPct} of 100). People may be using it to help with parts of the job.`) : null);
 }
 
 /* ------------------------------------------------------------------ scenario */
@@ -316,6 +317,9 @@ function lightcastPanels(ctx, o) {
 /* ------------------------------------------------------------------ entry */
 export function renderJob(root, ctx, o) {
   const plan = ctx.model.plans[o.soc];
+  // Lightcast leads (exposure, employer demand, software path, skills); then Claude usage, the plan,
+  // and the 2031 "what if" last, so the page matches the team's deck.
+  const lc = ctx.model.full && o.lc ? [lightcastStanding(ctx, o), ...lightcastPanels(ctx, o)] : [];
   root.replaceChildren(h('div', {class: 'jobview'},
-    header(ctx, o), standing(ctx, o), scenarioPanel(ctx, o), planPanel(ctx, o), details(ctx, o, plan)));
+    header(ctx, o), ...lc, standing(ctx, o), planPanel(ctx, o), scenarioPanel(ctx, o), details(ctx, o, plan)));
 }
