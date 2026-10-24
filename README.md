@@ -2,6 +2,12 @@
 
 Career Bridge shows Massachusetts workers where their job stands with AI: how much the work overlaps with what AI can do, how often local employers already ask for AI skills, which tasks people already use AI for, the skills that set the job apart, and next moves that build on skills the worker already has and pay at least as much. A second view lets workforce boards scan every occupation, filter to groups such as jobs with high exposure but little employer demand for AI skills, and sort by workers, wages or exposure.
 
+## Demo
+
+`./demo.sh` builds the data on first run, starts the server and opens the browser on Customer Service Representatives. Suggested path: Customer service rep (exposed, no employer signal, jobs down 24%) → Marketing manager (where software was in early 2025) → a next move → For workforce boards.
+
+**How to read "Following software's path?"** It places a job's employer demand for generative-AI skills on the path software took (0.5% of ads in 2023 to 14% in 2026). It is a position, not a timeline: a backtest on 2024–2026 found jobs keep rising once they start (74–90% did), but at about half to four-fifths of software's speed. It says nothing about job losses.
+
 ## Quick start
 
 1. Put the event data folder (with `anthropic/`, `lightcast/`, `oews/`, `onet/` inside) at `sgi_dataset/`, or point `SGI_DATA` at it. No data is in this repo.

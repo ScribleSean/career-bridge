@@ -12,8 +12,8 @@ const QTEXT = {
 };
 const QCLASS = q => (QTEXT[q] || QTEXT[THIN])[0];
 const JZ = {1: 'little or no preparation', 2: 'some preparation', 3: 'medium preparation', 4: 'considerable preparation', 5: 'extensive preparation'};
-const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'], ['13-2011', 'Accountant'], ['43-1011', 'Office supervisor'], ['29-1141', 'Registered nurse']];
-const DEFAULT_SOC = '43-6014';
+const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'], ['13-2011', 'Accountant'], ['43-1011', 'Office supervisor'], ['29-1141', 'Registered nurse'], ['15-1252', 'Software developer'], ['11-2021', 'Marketing manager']];
+const DEFAULT_SOC = '43-4051';
 
 let META = {state_rate_2025: 6.18, exposure_median: 55.7, exposure_min: 31.5, exposure_max: 82.8};
 
@@ -239,7 +239,7 @@ function softwareSentence(o) {
   const st = o.software_path_status, yb = o.years_behind_software;
   if (st === 'level') return 'Level with software: employers here ask for generative-AI skills at least as often as software employers do now.';
   if (st === 'behind' && yb === 0) return 'Close to level with software: employers here ask for generative-AI skills almost as often as software employers do now.';
-  if (st === 'behind' && yb != null) return `Employers here ask for generative-AI skills about as often as software employers did in ${whenTxt(2026 - yb)}: ${yrsTxt(yb)} behind.`;
+  if (st === 'behind' && yb != null) return `Employers here ask for generative-AI skills about as often as software employers did in ${whenTxt(2026 - yb)}.`;
   if (st === 'not_started') return 'Not started: fewer job ads here ask for generative-AI skills than software’s did in 2023.';
   return 'Too few job ads to tell.';
 }
@@ -251,7 +251,7 @@ function panelSoftware(o, genai) {
     h('p', {class: 'sub'}, 'Software development changed first. US job ads asking for generative-AI skills'),
     soft.length > 1 ? softwareChart(soft, job, o) : null,
     h('p', {style: 'margin:0'}, softwareSentence(o)),
-    h('p', {class: 'foot', style: 'margin:0'}, 'A pattern in employer demand, not a forecast of jobs.'));
+    h('p', {class: 'foot', style: 'margin:0'}, 'A position on software’s path, not a timeline: since 2024, jobs at this stage have moved about half to four-fifths as fast as software did. Employer demand in job ads, not a forecast of jobs.'));
 }
 function softwareChart(soft, job, o) {
   const W = 600, H = 160, L = 44, R = 56, T = 14, B = 26;
@@ -327,7 +327,7 @@ function growthChart(series, all) {
   return h('div', {class: 'spark'},
     h('div', {class: 'legend'}, h('span', {style: '--c: var(--ai)'}, `This job: ${Math.round(first[1]).toLocaleString('en-US')} → ${Math.round(lastE[1]).toLocaleString('en-US')}`), h('span', {style: '--c: var(--muted)'}, 'All MA jobs')), s);
 }
-const fmtYB = o => o.software_path_status === 'level' ? 'level' : o.software_path_status === 'not_started' ? 'not started' : o.years_behind_software == null ? '—' : String(o.years_behind_software);
+const fmtYB = o => o.software_path_status === 'level' ? 'now' : o.software_path_status === 'not_started' ? 'before 2023' : o.years_behind_software == null ? '—' : o.years_behind_software === 0 ? 'now' : whenTxt(2026 - o.years_behind_software);
 
 function panelUse(o, d) {
   const tasks = (d.tasks || []).filter(t => t[1] > 0);
@@ -391,7 +391,7 @@ function panelMoves(o, paths) {
 }
 
 /* ---------- board view ---------- */
-const COLS = [['title', 'Job', 0, ''], ['ma_employment', 'MA workers', 1, ''], ['exposure', 'Exposure', 1, ''], ['ma_ai_2025', 'Ads asking AI', 1, ''], ['us_ai_2025', 'US ads asking AI', 1, 'opt'], ['ma_median_wage', 'Median wage', 1, 'opt'], ['bachelors_plus_pct', 'Bachelor’s+', 1, 'opt'], ['years_behind_software', 'Years behind software', 1, 'opt']];
+const COLS = [['title', 'Job', 0, ''], ['ma_employment', 'MA workers', 1, ''], ['exposure', 'Exposure', 1, ''], ['ma_ai_2025', 'Ads asking AI', 1, ''], ['us_ai_2025', 'US ads asking AI', 1, 'opt'], ['ma_median_wage', 'Median wage', 1, 'opt'], ['bachelors_plus_pct', 'Bachelor’s+', 1, 'opt'], ['years_behind_software', 'Where software was', 1, 'opt']];
 let boardInit = false, boardSeq = 0, boardState = {quadrant: GAP, family: '', q: '', sort: 'ma_employment', dir: 'desc'};
 function boardHash(s) {
   const p = new URLSearchParams();
