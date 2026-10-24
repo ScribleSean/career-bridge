@@ -6,10 +6,10 @@ import {lineChart, barList} from '../charts.js';
 import {trendJobs, pathJobs, jobs2031, presetOf} from '../scenario.js';
 
 export const POSTURE = {
-  'Stay the course': ['calm', 'You’re in good shape', 'Claude isn’t used much on this kind of work. Keep learning, and check back now and then.'],
+  'Stay the course': ['calm', 'Keep building', 'Claude isn’t used much on this kind of work today. Keep learning, and check back now and then.'],
   'Upskill in place': ['mid', 'Get good with AI', 'Some of this work is where people use Claude. Learn to use it well and you’ll be ahead of the pack.'],
   'Stay and reposition': ['high', 'Shift your focus', 'A lot of this work is where Claude gets used, but these jobs have held steady. Spend more of your time on the parts that need a person.'],
-  'Prepare to move': ['urgent', 'Start planning a move', 'A lot of this work is where Claude gets used, and there could be fewer of these jobs. Better to build skills for a nearby job now than to scramble later.'],
+  'Prepare to move': ['urgent', 'Explore nearby jobs', 'A lot of this work is where Claude gets used, and the 2031 what-if shows fewer of these jobs. Building skills for a nearby job now keeps your options open.'],
 };
 export const postureLabel = (p) => (POSTURE[p] ? POSTURE[p][1] : '—');
 
@@ -92,7 +92,7 @@ function scenarioPanel(ctx, o) {
     return h('div', {class: 'slider'}, h('label', {for: id}, label), h('div', {class: 'srow'}, input, out));
   };
   const aRow = mk('sc-a', 'Work AI takes on by 2031', 5, 80, 5, Math.round(state.A * 100));
-  const pRow = mk('sc-p', 'Share of that which cuts jobs', 10, 100, 10, Math.round(state.P * 100));
+  const pRow = mk('sc-p', 'Share of that which means fewer jobs', 10, 100, 10, Math.round(state.P * 100));
   const presetBtns = Object.entries({slow: 'Slow', base: 'Medium', fast: 'Fast'}).map(([k, label]) =>
     h('button', {type: 'button', class: 'seg', 'data-k': k, onclick: () => { sliders['sc-a'].input.value = model.presets[k].A * 100; sliders['sc-p'].input.value = model.presets[k].P * 100; update(true); }}, label));
   const big = h('p', {class: 'bignum'});
@@ -112,7 +112,7 @@ function scenarioPanel(ctx, o) {
     big.replaceChildren(h('b', {}, fmt.n(ai)), ` in 2031 · ${fmt.n(o.jobs)} today`);
     stats.replaceChildren(
       stat('Recent trend', fmt.n(trend), fmt.signed((trend / o.jobs - 1) * 100, 0)),
-      stat('With AI', fmt.n(ai), fmt.signed((ai / o.jobs - 1) * 100, 0)),
+      stat('AI what-if', fmt.n(ai), fmt.signed((ai / o.jobs - 1) * 100, 0)),
       stat('Difference', fmt.signedN(ai - trend), fmt.signed((ai / trend - 1) * 100)));
     const years = [0, 1, 2, 3, 4, 5, 6];
     const all = years.flatMap((y) => [trendJobs(o, o.jobs, y), pathJobs(o, o.jobs, A, P, y)]);
@@ -120,13 +120,13 @@ function scenarioPanel(ctx, o) {
     chartBox.replaceChildren(lineChart({
       series: [
         {name: 'Recent trend', color: 'var(--muted)', dash: '5 4', shape: 'circle', points: years.map((y) => [2025 + y, trendJobs(o, o.jobs, y)])},
-        {name: 'With AI', color: 'var(--c-use)', shape: 'square', points: years.map((y) => [2025 + y, pathJobs(o, o.jobs, A, P, y)])},
+        {name: 'AI what-if', color: 'var(--c-use)', shape: 'square', points: years.map((y) => [2025 + y, pathJobs(o, o.jobs, A, P, y)])},
       ],
       xTicks: years.filter((y) => y % 2 === 0).map((y) => [2025 + y, String(2025 + y)]), yMin: Math.max(0, lo - padv), yMax: hi + padv,
       yFmt: (v) => fmt.compact(v), endFmt: (v) => fmt.compact(v), right: 56,
-      desc: `Jobs in ${o.title} from 2025 to 2031. If recent trends continue: ${fmt.n(trend)}. With AI at the chosen speed: ${fmt.n(ai)}.`,
+      desc: `Jobs in ${o.title} from 2025 to 2031. If recent trends continue: ${fmt.n(trend)}. AI what-if at the chosen speed: ${fmt.n(ai)}.`,
     }));
-    if (commit) announce(`2031 jobs: ${fmt.n(ai)} with AI, ${fmt.n(trend)} if recent trends continue.`);
+    if (commit) announce(`2031 jobs: ${fmt.n(ai)} in the AI what-if, ${fmt.n(trend)} if recent trends continue.`);
   }
   for (const s of Object.values(sliders)) { s.input.addEventListener('input', () => update(false)); s.input.addEventListener('change', () => update(true)); }
   update(false);
