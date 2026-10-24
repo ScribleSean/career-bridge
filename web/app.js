@@ -169,8 +169,9 @@ async function renderOcc(soc) {
     h('div', {class: 'occhead'},
       h('span', {class: 'grp'}, o.major_group + ' · SOC ' + o.soc),
       h('h2', {id: 'occ-title', tabindex: '-1'}, o.title),
-      h('div', {class: 'verdict'}, h('span', {class: 'pill ' + cls}, o.quadrant), h('p', {}, text))),
-    h('div', {class: 'grid'}, panelStand(o, d.trend), panelSoftware(o, d.genai), panelGrowth(o, d.growth), panelUse(o, d), panelSkills(d), panelMoves(o, d.paths))));
+      h('div', {class: 'verdict'}, h('span', {class: 'pill ' + cls}, o.quadrant), h('p', {}, text)),
+      src(['Group: Lightcast exposure + MA job ads 2025', 'lc'])),
+    h('div', {class: 'grid'}, panelStand(o, d.trend), panelSoftware(o, d.genai), panelSkills(d), panelMoves(o, d.paths), panelUse(o, d), panelGrowth(o, d.growth))));
   if (shownSoc && shownSoc !== o.soc && root.getBoundingClientRect().top < 0) {
     root.scrollIntoView({block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
     $('occ-title').focus({preventScroll: true});
@@ -178,6 +179,10 @@ async function renderOcc(soc) {
   shownSoc = o.soc;
 }
 let shownSoc = null;
+
+/* Source tags: Lightcast is the core dataset, so its tag is highlighted; every other figure names its source. */
+const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['BLS OEWS 2019–2025', ''], onet: ['O*NET 31.0', ''], aei: ['Anthropic Economic Index', '']};
+const src = (...keys) => h('span', {class: 'srcs'}, keys.map(k => { const [n, c] = Array.isArray(k) ? k : SRC[k]; return h('span', {class: ('src ' + c).trim(), title: 'Source: ' + n}, n); }));
 
 function meter(x) {
   const lo = META.exposure_min, hi = META.exposure_max, med = META.exposure_median;
@@ -195,16 +200,16 @@ function panelStand(o, trend) {
   const rel = o.exposure > META.exposure_median ? 'More exposed than the median job' : 'Less exposed than the median job';
   return h('div', {class: 'panel'},
     h('h3', {}, 'Where your job stands'),
-    h('p', {class: 'sub'}, 'Massachusetts, 2025 unless noted'),
+    h('p', {class: 'sub'}, 'Massachusetts, 2025 unless noted. Each figure names its source.'),
     h('div', {class: 'stats'},
       h('div', {class: 'stat'}, h('span', {class: 'k'}, 'AI exposure (overlap with AI)'), h('span', {class: 'v'}, o.exposure.toFixed(1)),
-        meter(o.exposure), h('span', {class: 'n'}, rel)),
-      h('div', {class: 'stat'}, h('span', {class: 'k'}, 'Job ads asking for AI skills'), h('span', {class: 'v'}, fmtP(o.ma_ai_2025)), h('span', {class: 'n'}, `US ${fmtP(o.us_ai_2025)} · state average ${META.state_rate_2025}%`)),
-      h('div', {class: 'stat'}, h('span', {class: 'k'}, 'Median annual wage'), h('span', {class: 'v'}, fmtW(o.ma_median_wage)), h('span', {class: 'n'}, 'US ' + fmtW(o.us_median_wage))),
-      h('div', {class: 'stat'}, h('span', {class: 'k'}, 'People in this job in MA'), h('span', {class: 'v'}, fmtN(o.ma_employment)), h('span', {class: 'n'}, o.bachelors_plus_pct != null ? `${Math.round(o.bachelors_plus_pct)}% hold a bachelor’s or more` : '')),
+        meter(o.exposure), h('span', {class: 'n'}, rel), src(['Lightcast AI Exposure Index', 'lc'])),
+      h('div', {class: 'stat'}, h('span', {class: 'k'}, 'Job ads asking for AI skills'), h('span', {class: 'v'}, fmtP(o.ma_ai_2025)), h('span', {class: 'n'}, `US ${fmtP(o.us_ai_2025)} · state average ${META.state_rate_2025}%`), src(['Lightcast job ads 2025', 'lc'])),
+      h('div', {class: 'stat'}, h('span', {class: 'k'}, 'Median annual wage'), h('span', {class: 'v'}, fmtW(o.ma_median_wage)), h('span', {class: 'n'}, 'US ' + fmtW(o.us_median_wage)), src('oews')),
+      h('div', {class: 'stat'}, h('span', {class: 'k'}, 'People in this job in MA'), h('span', {class: 'v'}, fmtN(o.ma_employment)), h('span', {class: 'n'}, o.bachelors_plus_pct != null ? `${Math.round(o.bachelors_plus_pct)}% of workers hold a bachelor’s or more (O*NET)` : ''), src('oews')),
     ),
-    tr.length > 1 ? spark(tr) : h('p', {class: 'empty'}, 'Not enough job ads to show a trend.'),
-    jz ? h('p', {class: 'foot', style: 'margin:0'}, `Job Zone ${jz}: ${JZ[jz]}. Postings confidence in MA: ${o.ma_confidence}.`) : null);
+    tr.length > 1 ? h('div', {style: 'display:grid;gap:6px'}, h('h4', {}, 'Job ads asking for AI skills, 2023–2026'), spark(tr), src(['Lightcast job ads 2023–Sep 2026', 'lc'])) : h('p', {class: 'empty'}, 'Not enough job ads to show a trend.'),
+    h('p', {class: 'foot', style: 'margin:0'}, [jz ? `Job Zone ${jz}: ${JZ[jz]} (O*NET). ` : '', `Job-ad confidence in MA: ${o.ma_confidence} (Lightcast).`].join('')));
 }
 
 function spark(tr) {
@@ -249,6 +254,7 @@ function panelSoftware(o, genai) {
   return h('div', {class: 'panel'},
     h('h3', {}, 'Following software’s path?'),
     h('p', {class: 'sub'}, 'Software development changed first. US job ads asking for generative-AI skills'),
+    src(['Lightcast job ads 2023–Sep 2026', 'lc']),
     soft.length > 1 ? softwareChart(soft, job, o) : null,
     h('p', {style: 'margin:0'}, softwareSentence(o)),
     h('p', {class: 'foot', style: 'margin:0'}, 'A position on software’s path, not a timeline: since 2024, jobs at this stage have moved about half to four-fifths as fast as software did. Employer demand in job ads, not a forecast of jobs.'));
@@ -295,7 +301,8 @@ function panelGrowth(o, series) {
   const pill = {faster: ['ai', 'Growing faster than average'], slower: ['gap', 'Growing slower than average'], similar: ['neutral', 'About average'], too_little_data: ['neutral', 'Too little data']}[o.ma_growth_status || 'too_little_data'];
   return h('div', {class: 'panel'},
     h('h3', {}, 'Job growth in Massachusetts'),
-    h('p', {class: 'sub'}, 'People employed in this job, May of each year (BLS OEWS)'),
+    h('p', {class: 'sub'}, 'People employed in this job, May of each year'),
+    src('oewsh'),
     h('div', {class: 'verdict'}, h('span', {class: 'pill ' + pill[0]}, pill[1])),
     (series || []).length > 1 ? growthChart(series, gm.all_jobs) : null,
     h('p', {style: 'margin:0'}, growthSentence(o, gm.all_growth_pct)),
@@ -336,12 +343,14 @@ function panelUse(o, d) {
   return h('div', {class: 'panel'},
     h('h3', {}, 'What people already use AI for in this job'),
     h('p', {class: 'sub'}, 'Tasks from this job that show up most in Claude conversations, US, Apr–May 2026'),
+    src(['Anthropic Economic Index (Claude.ai)', ''], ['task text: O*NET 31.0', '']),
     tasks.length ? h('ul', {class: 'list'}, tasks.map(t => h('li', {}, h('span', {}, t[0]), h('div', {class: 'bar', style: `width:${Math.max(3, 100 * t[1] / max)}%`}), h('span', {class: 'meta'}, `${t[1].toFixed(2)}% of conversations`))))
       : h('p', {class: 'empty'}, 'Too few conversations map to this job’s tasks to show. That can mean little AI use, or a job the data does not capture well.'),
     o.claude_share_us != null ? h('p', {class: 'foot', style: 'margin:0'}, `This job’s tasks appear in ${o.claude_share_us.toFixed(2)}% of US Claude conversations.`) : null,
     h('div', {}, h('h4', {}, 'AI skills employers name in job ads'),
       ai.length ? h('div', {class: 'tags'}, ai.map(s => h('span', {class: 'tag aiTag'}, s[1], h('em', {}, s[2] + '%'))))
-        : h('p', {class: 'empty'}, 'None of the most-requested skills in this job’s ads are AI skills.')));
+        : h('p', {class: 'empty'}, 'None of the most-requested skills in this job’s ads are AI skills.'),
+      src(['Lightcast job ads 2025', 'lc'])));
 }
 
 function panelSkills(d) {
@@ -352,14 +361,16 @@ function panelSkills(d) {
   const tags = arr => arr.length ? h('div', {class: 'tags'}, arr.map(s => h('span', {class: 'tag' + (s[4] ? ' aiTag' : '')}, s[1], h('em', {}, s[2] + '%')))) : h('p', {class: 'empty'}, 'Not listed');
   return h('div', {class: 'panel'},
     h('h3', {}, 'Your human edge and what employers ask for'),
-    h('p', {class: 'sub'}, 'O*NET skill ratings and the skills most named in job ads'),
+    h('p', {class: 'sub'}, 'What employers ask for in job ads, and the skills this job relies on most'),
     h('div', {class: 'two'},
-      h('div', {}, h('h4', {}, 'Your strengths'),
-        st.length ? h('ul', {class: 'list'}, st.map(s => h('li', {}, h('span', {}, h('b', {}, s[0]), ` · importance ${s[1].toFixed(1)} of 5`), h('span', {class: 'meta'}, `+${s[2].toFixed(2)} above the average MA job`)))) : h('p', {class: 'empty'}, 'No O*NET skill ratings for this job.')),
       h('div', {style: 'display:grid;gap:12px'},
         h('div', {}, h('h4', {}, 'Core skills in ads'), tags(by('S'))),
         h('div', {}, h('h4', {}, 'Everyday skills in ads'), tags(by('C'))),
-        h('div', {}, h('h4', {}, 'Certifications'), tags(by('R'))))),
+        h('div', {}, h('h4', {}, 'Certifications'), tags(by('R'))),
+        src([`Lightcast job ads 2025, ${geo === 'MA' ? 'Massachusetts' : 'US'}`, 'lc'])),
+      h('div', {}, h('h4', {}, 'Your strengths'),
+        st.length ? h('ul', {class: 'list'}, st.map(s => h('li', {}, h('span', {}, h('b', {}, s[0]), ` · importance ${s[1].toFixed(1)} of 5`), h('span', {class: 'meta'}, `+${s[2].toFixed(2)} above the average MA job`)))) : h('p', {class: 'empty'}, 'No O*NET skill ratings for this job.'),
+        src(['O*NET 31.0 skill ratings', ''], ['MA average weighted by BLS OEWS', '']))),
     h('p', {class: 'foot', style: 'margin:0'}, `Percent of ${geo === 'MA' ? 'Massachusetts' : 'US'} job ads for this job naming each skill, 2025.`));
 }
 
@@ -387,6 +398,7 @@ function panelMoves(o, paths) {
     h('p', {class: 'sub'}, 'Closest jobs by skill profile that pay at least as much in MA and ask for more AI skills'),
     h('label', {class: 'toggle', for: 'strict'}, cb, `Only jobs where employers already ask for AI skills (${META.state_rate_2025}%+ of ads)`),
     box,
+    src(['Ads asking AI: Lightcast 2025', 'lc'], ['Skill match: O*NET 31.0', ''], ['Wages, workers: BLS OEWS May 2025', '']),
     h('p', {class: 'foot', style: 'margin:0'}, 'Starting points for a conversation with a career advisor. Select a move to see its full profile.'));
 }
 
@@ -443,8 +455,12 @@ async function renderBoard(params) {
   if (seq !== boardSeq) return;
   const sum = d.summary, sb = $('boardSummary');
   if (!sb.children.length) {
-    [[fmtN(sum.gap_workers), 'MA workers in exposed jobs with little employer demand for AI skills'], [Math.round(sum.gap_share) + '%', 'of workers in the jobs covered here'], [String(sum.gap_count), 'occupations in that group'], [fmtP(sum.state_rate, 2), 'of all MA job ads asked for AI skills in 2025']]
-      .forEach(([v, k]) => sb.append(h('div', {class: 'panel stat'}, h('span', {class: 'v'}, v), h('span', {class: 'k'}, k))));
+    [[fmtN(sum.gap_workers), 'MA workers in exposed jobs with little employer demand for AI skills', src(['Groups: Lightcast', 'lc'], ['Workers: BLS OEWS May 2025', ''])],
+     [Math.round(sum.gap_share) + '%', 'of workers in the jobs covered here', src(['Lightcast', 'lc'], ['BLS OEWS', ''])],
+     [String(sum.gap_count), 'occupations in that group', src(['Lightcast', 'lc'])],
+     [fmtP(sum.state_rate, 2), 'of all MA job ads asked for AI skills in 2025', src(['Lightcast job ads 2025', 'lc'])]]
+      .forEach(([v, k, s]) => sb.append(h('div', {class: 'panel stat'}, h('span', {class: 'v'}, v), h('span', {class: 'k'}, k), s)));
+    sb.after(h('p', {class: 'foot', id: 'boardSources'}, 'Columns: Exposure, Ads asking AI, US ads asking AI and Where software was come from Lightcast. MA workers and Median wage come from BLS OEWS (May 2025). Bachelor’s+ comes from O*NET 31.0 education data. Groups use Lightcast exposure above 55.7 and MA AI-skill demand at or above the 2025 state rate.'));
   }
   document.querySelectorAll('#bt th').forEach(th => {
     const on = th.dataset.k === d.sort;
