@@ -11,6 +11,6 @@ if [ ! -f data/careerbridge.json ] && [ -f "${SGI_DATA:-sgi_dataset}/lightcast/l
   echo "Building Lightcast data (first run)..."
   "$PY" pipeline/build.py || exit 1
 fi
-URL="http://localhost:$PORT/#/job/43-4051"
+URL="http://localhost:$PORT/#/job/43-6014"
 ( sleep 1; command -v open >/dev/null && open "$URL" || echo "Open $URL" ) &
 exec "$PY" server.py --port "$PORT"

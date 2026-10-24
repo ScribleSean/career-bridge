@@ -10,7 +10,7 @@ import {renderExplore} from './js/views/explore.js';
 import {renderBoard} from './js/views/board.js';
 import {renderAbout} from './js/views/about.js';
 
-const DEFAULT_SOC = '43-4051';
+const DEFAULT_SOC = '43-6014';  // Denise, the administrative assistant from slide 2
 const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'],
   ['13-2011', 'Accountant'], ['29-1141', 'Registered nurse'], ['15-1252', 'Software developer'], ['11-2021', 'Marketing manager'], ['47-2111', 'Electrician']];
 

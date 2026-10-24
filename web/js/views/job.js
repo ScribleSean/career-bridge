@@ -20,7 +20,7 @@ const SOURCES = {'Where this job stands with AI': ['lc'], 'How much people use C
   'What people use AI for in this job': ['aei', 'onet', 'lc'], 'Your human edge and what employers ask for': ['lc', 'onet']};
 // No subtitles or footnotes: a panel is its title, its source tags, and its content. Explanations live on the About page.
 const panel = (title, ...kids) => h('section', {class: 'panel'}, h('h3', {}, title), SOURCES[title] ? src(...SOURCES[title]) : null, ...kids);
-const QSHORT = {[GAP]: 'Lots of AI overlap · few employers asking', [HIHI]: 'Lots of AI overlap · employers asking', [LOHI]: 'Less AI overlap · employers asking', [LOLO]: 'Less AI overlap · few employers asking'};
+const QSHORT = {[GAP]: 'Broad gap', [HIHI]: 'Employers ask', [LOHI]: 'Lower overlap, higher signal', [LOLO]: 'Lower overlap, low signal'};  // the deck's group names
 const tags = (arr) => h('div', {class: 'tags'}, arr.map((s) => h('span', {class: 'tag'}, s)));
 const bare = (s) => s.replace(/^(Knowledge|Work Activities|Abilities): /, '');
 const fold = (summary, ...kids) => h('details', {class: 'more'}, h('summary', {}, summary), h('div', {class: 'morebody'}, ...kids));
@@ -32,7 +32,7 @@ function header(ctx, o) {
   // Lightcast verdict first (private build), then the plan's suggestion. Short pills, no sentences.
   const pills = [
     o.lc?.silent_gap ? h('span', {class: 'pill gap'}, 'Silent gap') : null,
-    o.lc && QSHORT[o.lc.quadrant] ? h('span', {class: 'pill ' + (o.lc.quadrant === GAP ? 'gap' : 'neutral')}, QSHORT[o.lc.quadrant]) : null,
+    o.lc && !o.lc.silent_gap && QSHORT[o.lc.quadrant] ? h('span', {class: 'pill ' + (o.lc.quadrant === GAP ? 'gap' : 'neutral')}, QSHORT[o.lc.quadrant]) : null,
     h('span', {class: 'pill ' + cls}, label)];
   return h('header', {class: 'occhead'},
     h('span', {class: 'grp'}, o.group),

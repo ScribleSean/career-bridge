@@ -363,8 +363,18 @@ def build():
         rec["ma_growth_status"] = g.get("status", "too_little_data")
         out_occ.append(rec)
 
+    # MA job change 2019 -> 2025 for each group (and the silent gap), summed over jobs with both years.
+    sums = {}
+    for rec in out_occ:
+        series = dict((y, v) for y, v in gocc.get(rec["soc"], {}).get("emp", []))
+        if 2019 in series and 2025 in series:
+            for k in [rec["quadrant"]] + (["Silent gap"] if rec["silent_gap"] else []):
+                tot = sums.setdefault(k, [0.0, 0.0]); tot[0] += series[2019]; tot[1] += series[2025]
+    group_growth = {k: round(100 * (end / start - 1), 1) for k, (start, end) in sums.items() if start}
+
     result = {
         "meta": {
+            "group_growth": group_growth,
             "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "state_rate_2025": rate,
             "exposure_cut": EXPOSURE_CUT,      # Lightcast band: Medium-high starts at 50
