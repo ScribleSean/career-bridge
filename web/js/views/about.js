@@ -1,5 +1,6 @@
 // What the measures mean, where the data comes from, and what it cannot tell you.
 import {h, fmt} from '../util.js';
+import {barList} from '../charts.js';
 
 export function renderAbout(root, ctx) {
   const {model} = ctx;
@@ -23,7 +24,7 @@ export function renderAbout(root, ctx) {
       sec('How people use Claude',
         h('p', {}, `In ${model.meta.usage_period}, ${fmt.pct(work.may, 0)} of US Claude.ai conversations were about work, ${fmt.pct(u.use_case.find((c) => c.name === 'Personal').may, 0)} were personal and ${fmt.pct(u.use_case.find((c) => c.name === 'Coursework').may, 0)} were for school. Work use held steady between the two months. Personal use went up and school use went down, which looks like the end of a school term, not a lasting change. Only two months have been published, so we can’t say where things are heading.`),
         h('div', {class: 'topics'}, h('h4', {}, 'What people ask Claude for, May 2026'),
-          h('ul', {class: 'list'}, u.topics.slice(0, 8).map((t) => h('li', {}, h('span', {}, t.name), h('span', {class: 'bar', style: `width:${Math.max(3, 100 * t.may / u.topics[0].may)}%`}), h('span', {class: 'meta'}, `${t.may.toFixed(1)}% of conversations (April ${t.apr.toFixed(1)}%)`)))))),
+          barList(u.topics.slice(0, 8).map((t) => ({label: t.name, value: t.may})), {fmt: (v) => (v === 0 ? '0' : v.toFixed(v < 1 ? 1 : 0)) + '%', unit: 'of US Claude conversations, May 2026'}))),
       sec('What this can’t tell you',
         h('ul', {class: 'notes'},
           h('li', {}, 'It shows where Claude is used. It doesn’t predict that jobs will disappear. Often AI just helps people do the work.'),
@@ -31,6 +32,8 @@ export function renderAbout(root, ctx) {
           h('li', {}, 'Pay is the typical (median) yearly pay. It leaves out benefits and self-employed people. The job counts are jobs, not people, so someone with two jobs counts twice.'),
           h('li', {}, 'Recent growth is a national number. The pandemic, interest rates and tech layoffs all overlap 2019 to 2025.'),
           h('li', {}, 'The other jobs we suggest are ideas to talk through with a career advisor. Licenses, what’s hiring near you, and your own experience aren’t in the data.'),
+          h('li', {}, '“Is this job following software?” places a job’s job-ad demand for generative-AI skills on the path software took (Lightcast). It is a position, not a timeline: since 2024 other jobs have moved at about half to four-fifths of software’s speed.'),
+          h('li', {}, 'Job growth in Massachusetts shows what happened from 2019 to 2025 (BLS OEWS), not why.'),
           h('li', {}, 'We don’t have race, gender or age numbers yet.'))),
       sec('Where the numbers come from', h('ul', {class: 'notes'}, [...model.meta.sources, ...(model.full ? ['Lightcast AI Exposure and Adoption by Occupation, 2023 to Sep 2026. Data Source: Lightcast, 2026.'] : [])].map((s) => h('li', {}, s)))),
       h('p', {class: 'foot'}, `${model.all.length} jobs · built ${(model.meta.built_at || '').slice(0, 10)} · ${model.full ? 'private version with Lightcast data' : 'public version'}`))));

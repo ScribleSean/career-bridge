@@ -1,6 +1,6 @@
 // Sortable table used by Explore and the workforce board. The first column is a real link, so keyboard and
 // screen-reader users reach every job without the chart. Clicking anywhere else in a row opens it too.
-import {h} from './util.js';
+import {h, src} from './util.js';
 
 /** Sort rows by a column; empty values always go last. */
 export function sortRows(rows, col, dir) {
@@ -10,12 +10,14 @@ export function sortRows(rows, col, dir) {
   return present.concat(missing);
 }
 
-/** columns: [{key, label, num, opt, value(row), cell(row) -> node|string, first}]  sort: {key, dir} */
+/** columns: [{key, label, num, opt, src, value(row), cell(row) -> node|string, first}]  sort: {key, dir}
+ *  src: a source key (see util.js SRC); the header then shows that source's tag under the label. */
 export function dataTable({caption, columns, rows, sort, onSort, href, onOpen}) {
   const head = h('tr', {}, columns.map((c) => h('th', {scope: 'col', class: [c.num ? 'n' : '', c.opt ? 'opt' : ''].join(' ').trim() || null,
     'aria-sort': sort.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'},
     h('button', {type: 'button', id: 'sort-' + c.key, onclick: () => onSort(c.key, sort.key === c.key ? (sort.dir === 'asc' ? 'desc' : 'asc') : (c.num ? 'desc' : 'asc'))},
-      c.label, h('span', {class: 'arr', 'aria-hidden': 'true'}, sort.key === c.key ? (sort.dir === 'asc' ? '▲' : '▼') : '')))));
+      c.label, h('span', {class: 'arr', 'aria-hidden': 'true'}, sort.key === c.key ? (sort.dir === 'asc' ? '▲' : '▼') : '')),
+    c.src ? src(c.src) : null)));
   const body = rows.map((r) => h('tr', {onclick: (e) => { if (!e.target.closest('a,button')) onOpen(r); }},
     columns.map((c) => {
       const content = c.cell ? c.cell(r) : c.value(r);

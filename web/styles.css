@@ -254,3 +254,32 @@ ul.notes { padding-left: 1.3rem; display: grid; gap: 10px; }
   .plot .dot { stroke: CanvasText; }
   .seg[aria-pressed="true"], .chip[aria-pressed="true"], nav.tabs a[aria-current="page"] { outline: 3px solid Highlight; }
 }
+
+/* ---- No helper text: pills carry verdicts, results are one line, scales are labeled. ---- */
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 1rem; background: var(--ai-soft); color: var(--ink); border-left: 6px solid var(--ai); }
+.pill.gap { background: var(--gap-soft); border-left-color: var(--gap); }
+.pill.neutral { background: var(--line); border-left-color: var(--muted); }
+.pill.calm { background: var(--ok-soft); border-left-color: var(--ok); }
+.pill.urgent { background: #FBE0D3; border-left-color: #8A2E0E; }
+.result { font-size: 1.15rem; font-weight: 600; }
+.count { color: var(--muted); font-variant-numeric: tabular-nums; }
+th .srcs { display: flex; margin-top: 4px; font-weight: 400; }
+/* Shared bar scale: axis ticks on top, faint gridlines through every track, value at the bar's end. */
+.blist { display: grid; gap: 10px; }
+.blist ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.blist li { display: grid; gap: 4px; }
+.baxis { position: relative; height: 1.4em; margin-right: 4.5em; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--line); }
+.baxis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.baxis span:first-child { transform: none; }
+.btrack { position: relative; display: block; height: 14px; margin-right: 4.5em; }
+.bgrid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.bfill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c-use); min-width: 2px; }
+.btrack .bval { position: absolute; left: 100%; margin-left: 8px; top: -3px; font-size: .95rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.blist .bunit { color: var(--muted); font-size: .9rem; }
+.glegend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: .9rem; }
+.glegend span { display: inline-flex; align-items: center; gap: 6px; }
+.glegend i { display: inline-block; position: static; }
+.glegend .dotm { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+.glegend .whisk { width: 24px; height: 4px; background: var(--muted); }
+.glegend .zero { width: 2px; height: 14px; background: var(--ink); }

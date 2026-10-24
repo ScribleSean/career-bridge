@@ -95,21 +95,19 @@ export function renderExplore(root, ctx, params) {
   announce(summary);
 
   root.replaceChildren(h('div', {class: 'exploreview'},
-    h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'Compare jobs'),
-      h('p', {class: 'lede'}, 'See every job side by side: where AI shows up, which jobs are growing, and what could change. Click any job to open it.')),
+    h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'Compare jobs')),
     h('section', {class: 'panel controls'},
-      h('div', {class: 'ctlrow'}, select('ex-g', 'Show only one kind of work', [['', 'All kinds of work'], ...model.groups.map((g) => [g, g])], group, 'group')),
-      h('div', {}, h('p', {class: 'lbl'}, 'Show only jobs where we suggest'), chips),
-      h('div', {}, h('p', {class: 'lbl'}, 'How fast does AI spread? (changes the 2031 numbers)'), presets),
-      fold('Change what the picture shows',
+      h('div', {class: 'ctlrow'}, select('ex-g', 'Kind of work', [['', 'All kinds of work'], ...model.groups.map((g) => [g, g])], group, 'group')),
+      h('div', {}, h('p', {class: 'lbl'}, 'Suggestion'), chips),
+      h('div', {}, h('p', {class: 'lbl'}, 'AI speed (2031 what-if)'), presets),
+      fold('Chart axes',
         h('div', {class: 'ctlrow'},
-          select('ex-x', 'Across the bottom', Object.entries(X).filter(([, v]) => !v.full || model.full).map(([k, v]) => [k, v.label]), xk, 'x'),
-          select('ex-y', 'Up the side', Object.entries(Y).map(([k, v]) => [k, v.label]), yk, 'y')))),
-    h('section', {class: 'panel'}, h('h3', {}, 'Which kinds of work could change the most?'),
-      h('p', {class: 'sub'}, 'The dot shows where each kind of work could end up by 2031, compared with recent trends. The line runs from fast to slow AI spread. Click a row to show only that kind of work.'), src('oewsh', 'aei', 'onet'), outlook),
-    h('section', {class: 'panel'}, h('h3', {}, 'Every job in one picture'), h('p', {class: 'sub'}, summary), src(...(model.full ? ['oewsh', 'aei', 'onet', 'lc'] : ['oewsh', 'aei', 'onet'])), chartWrap,
-      h('p', {class: 'foot'}, 'Bigger circles mean more people. Colors match our suggestion for each job. Growth is capped at the extremes, so some circles line up along a flat edge. Hover or tap a circle to see the job. The table below has the same information.')),
-    h('section', {class: 'panel'}, h('h3', {}, 'The same thing as a table'), h('p', {class: 'sub'}, 'Every job in your selection. Click a heading to sort.'), tbl)));
+          select('ex-x', 'Horizontal', Object.entries(X).filter(([, v]) => !v.full || model.full).map(([k, v]) => [k, v.label]), xk, 'x'),
+          select('ex-y', 'Vertical', Object.entries(Y).map(([k, v]) => [k, v.label]), yk, 'y')))),
+    h('section', {class: 'panel'}, h('h3', {}, 'What if: 2031 change vs recent trend, by kind of work'), src('oewsh', 'aei', 'onet'),
+      h('div', {class: 'glegend', 'aria-hidden': 'true'}, h('span', {}, h('i', {class: 'dotm'}), 'Selected speed'), h('span', {}, h('i', {class: 'whisk'}), 'Fast to slow'), h('span', {}, h('i', {class: 'zero'}), '0%')), outlook),
+    h('section', {class: 'panel'}, h('h3', {}, 'Every job'), src(...(model.full ? ['oewsh', 'aei', 'onet', 'lc'] : ['oewsh', 'aei', 'onet'])), h('p', {class: 'count'}, `${sel.length} jobs · ${fmt.n(total)} workers · circle size = workers`), chartWrap),
+    h('section', {class: 'panel'}, h('h3', {}, 'Table'), tbl)));
   draw();
   if (window.ResizeObserver) { let last = chartWrap.clientWidth; new ResizeObserver(() => { if (Math.abs(chartWrap.clientWidth - last) > 24) { last = chartWrap.clientWidth; draw(); } }).observe(chartWrap); }
 }

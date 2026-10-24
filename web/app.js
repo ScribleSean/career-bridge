@@ -118,7 +118,7 @@ q.addEventListener('keydown', (e) => {
 q.addEventListener('blur', () => setTimeout(() => { hits = []; drawResults(); }, 120));
 function pick(soc) { hits = []; drawResults(); q.blur(); if (location.hash === ctx.hrefJob(soc)) route(); else ctx.go('job', {}, soc); }
 function drawExamples() {
-  $('examples').replaceChildren(h('span', {class: 'lbl'}, 'Or try one:'), ...EXAMPLES.filter(([soc]) => model.bySoc.get(soc)?.jobs != null)
+  $('examples').replaceChildren(...EXAMPLES.filter(([soc]) => model.bySoc.get(soc)?.jobs != null)
     .map(([soc, name]) => h('button', {class: 'chip', type: 'button', onclick: () => pick(soc)}, name)));
 }
 
@@ -132,7 +132,7 @@ function drawExamples() {
     return;
   }
   model = makeModel(data, state.geo);
-  if (model.full) $('lcnote').textContent = ' and Lightcast (Data Source: Lightcast, 2026)';
+  if (model.full) $('lcnote').textContent = 'Data Source: Lightcast, 2026 · ';
   if (data.cb?.meta?.synthetic) { $('notice').hidden = false; $('notice').textContent = 'Test data: the Lightcast numbers shown are made up for testing.'; }
   drawGeo(); drawExamples();
   window.addEventListener('hashchange', route);

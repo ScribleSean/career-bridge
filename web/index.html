@@ -16,24 +16,23 @@
   <header class="top">
     <div class="brand">
       <h1>Career Bridge</h1>
-      <p>Worried about AI and your job? Look up what you do and see what could change, and what you can do about it.</p>
     </div>
     <div class="headrow">
       <nav class="tabs" id="nav" aria-label="Main"></nav>
-      <div class="geobox"><span class="lbl" id="geolbl">Show numbers for:</span><div class="segs" id="geo" role="group" aria-labelledby="geolbl"></div></div>
+      <div class="geobox"><div class="segs" id="geo" role="group" aria-label="Show numbers for"></div></div>
     </div>
   </header>
   <section class="find" aria-label="Find your job">
-    <label for="q">What do you do for work?</label>
+    <label for="q" class="sr">Find your job</label>
     <div class="combo">
-      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Type your job, like &ldquo;cashier&rdquo; or &ldquo;nurse&rdquo;" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results">
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Find your job" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results">
       <ul id="results" role="listbox" aria-label="Matching jobs" hidden></ul>
     </div>
     <div class="chips" id="examples" aria-label="Example jobs"></div>
   </section>
   <main id="main" tabindex="-1"><p class="notice" id="notice" hidden></p><div id="view"></div></main>
   <footer class="foot">
-    <p>This shows where AI is being used today. It doesn&rsquo;t mean your job is going away. Numbers come from BLS, O*NET and Anthropic<span id="lcnote"></span>. The jobs we suggest are ideas to talk through with a career advisor.</p>
+    <p><span id="lcnote"></span>BLS OEWS · O*NET 31.0 · Anthropic Economic Index</p>
   </footer>
 </div>
 <script type="module" src="app.js"></script>

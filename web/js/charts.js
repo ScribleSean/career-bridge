@@ -10,6 +10,27 @@ function niceTicks(lo, hi, n = 5) {
   return out;
 }
 
+/**
+ * Horizontal bars on one shared, labeled scale (0 to a rounded max), so bar length always means the same thing.
+ * rows: [{label, value}]; fmt formats ticks and values; unit names the axis (e.g. "% of conversations").
+ */
+export function barList(rows, {fmt = (v) => String(v), unit = ''} = {}) {
+  const max = Math.max(...rows.map((r) => r.value), 0);
+  const ticks = niceTicks(0, max || 1, 4);
+  const step = ticks.length > 1 ? ticks[1] - ticks[0] : (max || 1);
+  while (ticks[ticks.length - 1] < max) ticks.push(+(ticks[ticks.length - 1] + step).toPrecision(12));  // axis ends on a round tick past the data
+  const top = ticks[ticks.length - 1] || 1;
+  const pos = (v) => `${(100 * v) / top}%`;
+  const axis = h('div', {class: 'baxis', 'aria-hidden': 'true'}, ticks.map((t) => h('span', {style: `left:${pos(t)}`}, fmt(t))));
+  return h('div', {class: 'blist'}, unit ? h('p', {class: 'bunit'}, unit) : null, axis,
+    h('ul', {}, rows.map((r) => h('li', {},
+      h('span', {class: 'bl'}, r.label),
+      h('span', {class: 'btrack', role: 'img', 'aria-label': `${r.label}: ${fmt(r.value)}${unit ? ' ' + unit : ''}`},
+        ticks.map((t) => h('i', {class: 'bgrid', style: `left:${pos(t)}`})),
+        h('span', {class: 'bfill', style: `width:${pos(r.value)}`}),
+        h('b', {class: 'bval'}, fmt(r.value)))))));
+}
+
 function marker(shape, x, y, color) {
   if (shape === 'square') return svg('rect', {x: x - 4, y: y - 4, width: 8, height: 8, fill: color});
   if (shape === 'diamond') return svg('path', {d: `M${x} ${y - 5.5}L${x + 5.5} ${y}L${x} ${y + 5.5}L${x - 5.5} ${y}Z`, fill: color});
