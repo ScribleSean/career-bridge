@@ -46,30 +46,39 @@ function header(ctx, o) {
 }
 const fact = (k, v, s, text) => h('div', {class: 'fact' + (text ? ' text' : '')}, h('dt', {}, k), h('dd', {}, h('span', {class: 'fv'}, v), src(s)));
 
-/** One ruler: where this job falls between the lowest and the highest of all jobs. */
-/** One ruler: the track runs from the lowest job (left) to the highest (right); the value says the rest. */
-function ruler(cls, shape, label, pct, value) {
+/** One ruler. The track ranks every job from lowest (left) to highest (right).
+ *  ticks: [[position 0-100, label]] printed under the track; ref: {pos, label} marks a reference value above it. */
+function ruler(cls, shape, label, pct, value, ticks, ref) {
   const rank = pct == null ? 'Not enough data' : `Top ${Math.max(1, 100 - pct)}%`;
+  const at = (pos) => ({style: `left:${pos}%`});
   return h('li', {class: 'ruler'},
     h('div', {class: 'rl'}, h('span', {class: `mk ${cls} ${shape}`, 'aria-hidden': 'true'}), h('b', {}, label)),
+    ref ? h('div', {class: 'rref', 'aria-hidden': 'true'}, h('span', at(ref.pos), ref.label)) : null,
     h('div', {class: 'rtrack', role: 'img', 'aria-label': `${label}: ${rank} of jobs. ${value}`},
-      pct == null ? null : h('span', {class: `mk dotm ${cls} ${shape}`, style: `left:${pct}%`})),
-    h('div', {class: 'rends', 'aria-hidden': 'true'}, h('span', {}, 'Lowest job'), h('span', {}, 'Highest job')),
+      ticks.map(([pos]) => h('i', {class: 'rtick', ...at(pos)})),
+      ref ? h('i', {class: 'rtick ref', ...at(ref.pos)}) : null,
+      pct == null ? null : h('span', {class: `mk dotm ${cls} ${shape}`, ...at(pct)})),
+    h('div', {class: 'rticks', 'aria-hidden': 'true'}, ticks.map(([pos, t]) => h('span', at(pos), t))),
     h('div', {class: 'rv'}, h('b', {}, value), h('small', {}, rank)));
 }
+const WORD = {0: 'lowest', 50: 'median', 100: 'highest'};
+const named = (anchors, f) => anchors.map(([pos, v]) => [pos, `${f(v)} · ${WORD[pos]}`]);
 
 function standing(ctx, o) {
   return panel('How much people use Claude on this work',
-    h('ul', {class: 'rulers'}, ruler('use', 'circle', 'Claude use', Math.round(o.z), o.basis === 'content only (AEI withheld)' ? 'Estimated from tasks' : `${Math.round(o.z)} of 100`)));
+    h('ul', {class: 'rulers'}, ruler('use', 'circle', 'Claude use', Math.round(o.z), o.basis === 'content only (AEI withheld)' ? 'Estimated from tasks' : `${Math.round(o.z)} of 100`,
+      [[0, '0'], [50, '50'], [100, '100']])));
 }
 
 /** Lightcast first: AI overlap and employer demand (private build only). The header pills carry the verdict. */
 function lightcastStanding(ctx, o) {
-  const r = o.lc.ma_ai_2025, state = ctx.model.lcMeta?.state_rate_2025 ?? 6.18;
+  const m = ctx.model, r = o.lc.ma_ai_2025, state = m.lcMeta?.state_rate_2025 ?? 6.18;
+  const adsFmt = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)}%`;
   return panel('Where this job stands with AI',
     h('ul', {class: 'rulers'},
-      ruler('cap', 'square', 'AI overlap', o.capPct, `${o.lc.exposure.toFixed(1)} of 100`),
-      ruler('ads', 'diamond', 'MA job ads asking for AI', o.demandPct, r == null ? 'Too few ads' : `${fmt.pct(r)} · state ${state}%`)));
+      ruler('cap', 'square', 'AI overlap', o.capPct, `${o.lc.exposure.toFixed(1)} of 100`, named(m.capAnchors, (v) => v.toFixed(0))),
+      ruler('ads', 'diamond', 'MA job ads asking for AI', o.demandPct, r == null ? 'Too few ads' : `${fmt.pct(r)} of ads`,
+        named(m.demandAnchors, adsFmt), {pos: m.demandRank(state), label: `State ${state}%`})));
 }
 
 /* ------------------------------------------------------------------ scenario */

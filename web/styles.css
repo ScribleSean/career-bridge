@@ -115,7 +115,13 @@ dl.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100
 .rl .src { color: var(--muted); font-size: .95rem; }
 .rtrack { position: relative; height: 24px; margin-inline: 10px; }
 .rtrack::before { content: ""; position: absolute; left: -10px; right: -10px; top: 8px; height: 8px; background: var(--line); }
-.rends { display: flex; justify-content: space-between; color: var(--muted); font-size: .95rem; }
+.rtick { position: absolute; top: 2px; width: 2px; height: 20px; margin-left: -1px; background: var(--muted); }
+.rtick.ref { top: -6px; height: 28px; background: var(--ink); }
+.rticks, .rref { position: relative; height: 1.4em; margin-inline: 10px; color: var(--muted); font-size: .95rem; font-variant-numeric: tabular-nums; }
+.rref { color: var(--ink); margin-bottom: -4px; }
+.rticks span, .rref span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.rticks span:first-child { transform: translateX(-10px); }
+.rticks span:last-child { transform: translateX(calc(-100% + 10px)); }
 .rv { display: grid; line-height: 1.35; }
 .rv b { font-size: 1.1rem; }
 .rv small { color: var(--muted); font-size: .95rem; }
@@ -250,7 +256,7 @@ ul.notes { padding-left: 1.3rem; display: grid; gap: 10px; }
   th.opt, td.opt { display: none; }
 }
 @media (forced-colors: active) {
-  .mk, .bar, .gr .dotm, .gr .whisk, .rtrack::before { forced-color-adjust: none; background: CanvasText; }
+  .mk, .bar, .gr .dotm, .gr .whisk, .rtrack::before, .rtick { forced-color-adjust: none; background: CanvasText; }
   .plot .dot { stroke: CanvasText; }
   .seg[aria-pressed="true"], .chip[aria-pressed="true"], nav.tabs a[aria-current="page"] { outline: 3px solid Highlight; }
 }
