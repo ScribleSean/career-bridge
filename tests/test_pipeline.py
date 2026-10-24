@@ -21,6 +21,7 @@ QUADRANTS = {"High exposure, low adoption", "High exposure, high adoption",
              "Too few MA job ads to measure"}
 
 
+@unittest.skipUnless(BUILT.exists(), "data/careerbridge.json not built (needs the Lightcast files; see README)")
 class TestCareerBridge(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

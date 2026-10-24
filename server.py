@@ -52,6 +52,7 @@ ALIASES = {
     "reps": "representatives",
 }
 
+DATA_FILES = {"/atlas.json", "/titles.json", "/careerbridge.json"}
 SOC_RE = re.compile(r"^\d{2}-\d{4}$")
 BOARD_SORT_KEYS = {"title", "ma_employment", "exposure", "ma_ai_2025", "us_ai_2025",
                    "ma_median_wage", "bachelors_plus_pct", "major_group", "claude_share_us",
@@ -75,8 +76,11 @@ class Store:
     """Loads the data once and keeps indexes for search and board queries."""
 
     def __init__(self, path, using_reference=False):
-        with open(path, encoding="utf-8") as f:
-            d = json.load(f)
+        self.lite = not os.path.exists(path)  # no Lightcast file: serve the open-data app only
+        d = {}
+        if not self.lite:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
         self.path = path
         self.using_reference = using_reference
         self.occ = d.get("occ", [])
@@ -249,6 +253,7 @@ class Store:
         m["families"] = self.families
         m["aliases"] = ALIASES
         m["using_reference"] = self.using_reference
+        m["lite"] = self.lite
         m["data_file"] = os.path.basename(self.path)
         if self.using_reference:
             m["warning"] = ("Showing the teammate's reference prototype data. "
@@ -319,8 +324,15 @@ def make_handler(store):
         def _static(self, path):
             if path in ("", "/"):
                 path = "/index.html"
-            full = os.path.realpath(os.path.join(WEB, path.lstrip("/")))
-            if not full.startswith(os.path.realpath(WEB) + os.sep) or not os.path.isfile(full):
+            # The page reads these JSON files directly; they live in data/ (gitignored), not web/.
+            if path == "/careerbridge.json":
+                full = os.path.realpath(store.path)
+                ok = os.path.isfile(full)
+            else:
+                base = os.path.realpath(os.path.join(HERE, "data") if path in DATA_FILES else WEB)
+                full = os.path.realpath(os.path.join(base, path.lstrip("/")))
+                ok = full.startswith(base + os.sep) and os.path.isfile(full)
+            if not ok:
                 return self._send(404, b"Not found", "text/plain; charset=utf-8")
             ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
             if ctype.startswith("text/") or ctype in ("application/javascript",):
@@ -354,7 +366,9 @@ def main():
     httpd = make_server(args.port, args.host)
     s = httpd.store
     print("Career Bridge: %d occupations from %s" % (len(s.occ), s.path))
-    if s.using_reference:
+    if s.lite:
+        print("Lite mode: no Lightcast file at %s. Serving the open-data app (data/atlas.json)." % s.path)
+    elif s.using_reference:
         print("WARNING: using reference_prototype.json (run pipeline/build.py for real data)")
     print("Open http://localhost:%d" % args.port)
     try:

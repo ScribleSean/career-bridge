@@ -3,76 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Career Bridge Massachusetts</title>
-<meta name="description" content="See where your job stands with AI in Massachusetts and next moves that build on your skills.">
-<meta name="color-scheme" content="light dark">
+<title>Career Bridge</title>
+<meta name="description" content="Worried about AI and your job? Look up what you do, see what could change by 2031, and get a plan for what to do about it.">
+<meta name="color-scheme" content="light">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="styles.css">
-<script>try { var t = localStorage.getItem('cb-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <div class="wrap">
   <header class="top">
     <div class="brand">
       <h1>Career Bridge</h1>
-      <p>See where your job stands with AI in Massachusetts, what people already use AI for in it, and next moves that build on skills you have.</p>
+      <p>Worried about AI and your job? Look up what you do and see what could change, and what you can do about it.</p>
     </div>
     <div class="headrow">
-      <nav class="tabs" role="tablist" aria-label="Views">
-        <a role="tab" href="#/" id="tab-worker" aria-selected="true" aria-controls="view-worker">For workers</a>
-        <a role="tab" href="#/board" id="tab-board" aria-selected="false" aria-controls="view-board">For workforce boards</a>
-        <a role="tab" href="#/about" id="tab-about" aria-selected="false" aria-controls="view-about">About the data</a>
-      </nav>
-      <button class="themebtn" id="theme" type="button" aria-label="Switch color theme" title="Switch light or dark">◐</button>
+      <nav class="tabs" id="nav" aria-label="Main"></nav>
+      <div class="geobox"><span class="lbl" id="geolbl">Show numbers for:</span><div class="segs" id="geo" role="group" aria-labelledby="geolbl"></div></div>
     </div>
   </header>
-  <p class="notice" id="notice" hidden></p>
-
-  <main id="main" tabindex="-1" style="display:grid;gap:18px">
-    <section id="view-worker" role="tabpanel" aria-labelledby="tab-worker" style="display:grid;gap:18px">
-      <div class="searchbox">
-        <label for="q">Find your job</label>
-        <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Try “admin assistant”, “bookkeeping”, “nurse”" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results">
-        <ul id="results" role="listbox" aria-label="Matching jobs" hidden></ul>
-        <div class="chips" id="examples"><span class="lbl">Examples:</span></div>
-      </div>
-      <div id="occ" aria-live="polite"></div>
-    </section>
-
-    <section id="view-board" role="tabpanel" aria-labelledby="tab-board" hidden style="display:grid;gap:14px">
-      <div class="summary" id="boardSummary"></div>
-      <div class="boardbar">
-        <label for="fq">Group<select id="fq"></select></label>
-        <label for="fs">Search jobs<input id="fs" type="search" placeholder="Filter by name"></label>
-        <label for="fg">Job family<select id="fg"></select></label>
-      </div>
-      <p class="foot" id="boardNote" aria-live="polite"></p>
-      <div class="tablewrap"><table id="bt"><caption class="sr">Massachusetts occupations by AI exposure and employer demand for AI skills. Select a column header to sort.</caption><thead><tr></tr></thead><tbody></tbody></table></div>
-    </section>
-
-    <section id="view-about" role="tabpanel" aria-labelledby="tab-about" hidden>
-      <div class="about panel">
-        <h3>What the measures mean</h3>
-        <p><b>AI exposure</b> (Lightcast AI Exposure &amp; Augmentation Index) is how much of a job’s abilities, skills and tasks overlap with what AI can do today. Across Massachusetts jobs it runs from about 31.5 to 82.8. A higher score means more overlap with AI. It does not predict job loss, and high exposure can mean AI helps with the work.</p>
-        <p><b>Employer demand for AI skills</b> is the share of Massachusetts job ads for the job that ask for at least one AI skill (Lightcast, 945 skills). Exposure is the same everywhere; demand is local.</p>
-        <p><b>The four groups.</b> High exposure means an index above 55.7, the median across occupations. High demand means at least 6.18% of MA job ads ask for AI skills, the statewide rate in 2025. Jobs with too few Massachusetts ads get a fifth group and no rate.</p>
-        <p><b>What people use AI for</b> comes from the Anthropic Economic Index: the job’s O*NET tasks that appear most in Claude.ai conversations in April–May 2026 (US). It covers one AI tool and is a share of conversations, not of workers.</p>
-        <p><b>Your strengths</b> are the O*NET skills rated more important in this job than in the average Massachusetts job. <b>Bridge skills</b> are the skills a next move rates most above your current job.</p>
-        <p><b>Next moves</b> are jobs with the most similar O*NET skill profile (cosine similarity, 0.70 or more) that pay at least as much in Massachusetts, need at most one more Job Zone of preparation, employ 1,000+ people in MA, and show more employer demand for AI skills than your current job.</p>
-        <h3>Limits</h3>
-        <ul>
-          <li>Job ads are employer demand, not hires. Small jobs in Massachusetts have too few ads for a rate.</li>
-          <li>Wages are OEWS medians and exclude benefits and self-employment.</li>
-          <li>Moves are starting points for a conversation with a career advisor, not advice for any one person.</li>
-          <li>No race, gender or age data is included yet.</li>
-        </ul>
-        <h3>Sources</h3>
-        <p>Lightcast AI Exposure and Adoption by Occupation, 2023–Sep 2026 (Data Source: Lightcast, 2026) · BLS OEWS May 2025 · O*NET 31.0 · Anthropic Economic Index, June 2026 release. Built for the Human Edge Studio challenge, from a teammate’s original prototype.</p>
-        <p class="foot" id="aboutMeta"></p>
-      </div>
-    </section>
-  </main>
+  <section class="find" aria-label="Find your job">
+    <label for="q">What do you do for work?</label>
+    <div class="combo">
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Type your job, like &ldquo;cashier&rdquo; or &ldquo;nurse&rdquo;" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results">
+      <ul id="results" role="listbox" aria-label="Matching jobs" hidden></ul>
+    </div>
+    <div class="chips" id="examples" aria-label="Example jobs"></div>
+  </section>
+  <main id="main" tabindex="-1"><p class="notice" id="notice" hidden></p><div id="view"></div></main>
+  <footer class="foot">
+    <p>This shows where AI is being used today. It doesn&rsquo;t mean your job is going away. Numbers come from BLS, O*NET and Anthropic<span id="lcnote"></span>. The jobs we suggest are ideas to talk through with a career advisor.</p>
+  </footer>
 </div>
 <script type="module" src="app.js"></script>
 </body>
