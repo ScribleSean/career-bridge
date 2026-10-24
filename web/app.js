@@ -38,8 +38,28 @@ const $ = id => document.getElementById(id);
 
 /* ---------- API ---------- */
 const cache = new Map();
+// Mode: the Python server if it answers, else no-server mode reading careerbridge.json beside this page.
+let staticHandle = null;
+const modeReady = (async () => {
+  try {
+    const r = await fetch('/api/meta', {headers: {Accept: 'application/json'}});
+    if (r.ok && (r.headers.get('content-type') || '').includes('json')) return;
+  } catch (e) { /* no server */ }
+  const [{makeStaticApi}, data] = await Promise.all([
+    import('./static-api.js'),
+    fetch(new URL('careerbridge.json', document.baseURI)).then(r => { if (!r.ok) throw new Error('data file missing'); return r.json(); }),
+  ]);
+  staticHandle = makeStaticApi(data);
+})();
 async function api(path, {useCache = true, signal} = {}) {
   if (useCache && cache.has(path)) return cache.get(path);
+  await modeReady;
+  if (staticHandle) {
+    const [status, body] = staticHandle(path);
+    if (status !== 200) { const err = new Error(body.error || `Request failed (${status})`); err.status = status; throw err; }
+    if (useCache) cache.set(path, body);
+    return body;
+  }
   const r = await fetch(path, {signal, headers: {Accept: 'application/json'}});
   let body = null;
   try { body = await r.json(); } catch (e) { /* non-JSON */ }

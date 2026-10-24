@@ -15,6 +15,8 @@ Data file lookup: `CB_DATA` environment variable, else `data/careerbridge.json`,
 
 Tests: `python -m unittest discover -s tests`
 
+**No-server mode.** If the Python server isn't running, the page loads `careerbridge.json` from its own folder and answers the same requests in the browser (`web/static-api.js`). So `web/` plus a built `careerbridge.json` runs on any static host. Only host it privately: the data file holds Lightcast-derived numbers.
+
 ## Pages and API
 
 - `#/job/43-6014` one job, `#/board` the workforce-board table (filters and sort are kept in the URL), `#/about` what the measures mean. Back and forward work.
