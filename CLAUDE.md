@@ -10,7 +10,7 @@ Massachusetts career tool for the Human Edge Studio challenge (SG+I, Oct 2026). 
 
 ## Skill signals
 - `web/js/signals.js` (data, samples, storage) and `web/js/views/signals.js` (feed, post, profile, job panel). Static demo: samples are generated and labeled Sample; user posts and confirms live in localStorage only.
-- Static site: `./build-site.sh` → `site/` (open data only; never copies Lightcast files).
+- Static site: `./build-site.sh` → `site/` (open data only; never copies Lightcast files). Live at https://scriblesean.github.io/career-bridge/ from the `gh-pages` branch: to update, rebuild and force-push `site/` as the only commit on `gh-pages`.
 
 ## UI
 - No taglines, subtitles, footnotes or helper sentences. A panel is a title, source tags (`src()`), and content. If a screen needs explaining, fix the layout; explanations and caveats live on the About page.
