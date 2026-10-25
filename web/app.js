@@ -11,6 +11,8 @@ import {renderExplore} from './js/views/explore.js';
 import {renderBoard} from './js/views/board.js';
 import {renderAbout} from './js/views/about.js';
 import {renderSignals, renderPost, renderMe} from './js/views/signals.js';
+import {renderMarket} from './js/views/market.js';
+import {renderOverview} from './js/views/overview.js';
 import {ROLES, role, setRole} from './js/signals.js';
 
 const DEFAULT_SOC = '43-6014';  // Denise, the administrative assistant from slide 2
@@ -33,7 +35,7 @@ function parseHash() {
   const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
   const parts = path.split('/').filter(Boolean);
   const params = Object.fromEntries(new URLSearchParams(query));
-  const view = ['explore', 'board', 'about', 'signals', 'post', 'me'].includes(parts[0]) ? parts[0] : 'job';
+  const view = !parts.length ? 'overview' : ['overview', 'market', 'explore', 'board', 'about', 'signals', 'post', 'me'].includes(parts[0]) ? parts[0] : 'job';
   return {view, params, soc: view === 'job' ? decodeURIComponent(parts[1] || '') : ''};
 }
 function hashFor(view, params = {}, soc = '') {
@@ -59,7 +61,7 @@ function route() {
   if (r.view === 'board' && !model.full) { history.replaceState(null, '', hashFor('explore')); return route(); }
   readScenario(r.params);
   drawNav(r);
-  document.querySelector('.find').hidden = !['job', 'explore', 'board'].includes(r.view);  // job search only where it's used
+  document.querySelector('.find').hidden = !['job', 'explore'].includes(r.view);  // job search only where it's used
   const view = $('view');
   const activeId = document.activeElement && view.contains(document.activeElement) ? document.activeElement.id : '';
   let key = r.view;
@@ -76,6 +78,8 @@ function route() {
     document.title = `${o.title} · Career Bridge`;
   } else if (r.view === 'explore') { renderExplore(view, ctx, r.params); document.title = 'Compare jobs · Career Bridge'; }
   else if (r.view === 'board') { renderBoard(view, ctx, r.params); document.title = 'For workforce boards · Career Bridge'; }
+  else if (r.view === 'overview') { renderOverview(view, ctx); document.title = 'Career Bridge · A public skills signal for Massachusetts'; }
+  else if (r.view === 'market') { renderMarket(view, ctx, r.params); document.title = 'Skills market · Career Bridge'; }
   else if (r.view === 'signals') { renderSignals(view, ctx, r.params); document.title = 'Skill signals · Career Bridge'; }
   else if (r.view === 'post') { renderPost(view, ctx, r.params); document.title = 'Post a signal · Career Bridge'; key = 'post:' + (r.params.soc || ''); }
   else if (r.view === 'me') { renderMe(view, ctx); document.title = 'Your profile · Career Bridge'; }
@@ -88,7 +92,7 @@ function route() {
 }
 
 function drawNav(r) {
-  const items = [['job', 'Your job', ctx.hrefJob(lastSoc)], ['signals', 'Skill signals', hashFor('signals')], ['explore', 'Compare jobs', hashFor('explore')], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About the numbers', hashFor('about')]];
+  const items = [['overview', 'Overview', '#/'], ['market', 'Skills market', hashFor('market')], ['signals', 'Skill signals', hashFor('signals')], ['job', 'Your job', ctx.hrefJob(lastSoc)], ['explore', 'Compare jobs', hashFor('explore')], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About the numbers', hashFor('about')]];
   $('nav').replaceChildren(...items.map(([k, label, href]) => h('a', {href, 'aria-current': k === r.view ? 'page' : null}, label)));
 }
 

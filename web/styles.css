@@ -2,19 +2,21 @@
    Lens colors (--c-*) and the approach ramp (--p1..4) were checked for color-blind separation (dataviz validator);
    charts also carry shape, dash and direct labels so color is never the only cue. */
 *, *::before, *::after { box-sizing: border-box; }
-html { font-size: 19px; -webkit-text-size-adjust: 100%; scroll-padding-top: 16px; }
+html { font-size: 18px; -webkit-text-size-adjust: 100%; scroll-padding-top: 16px; }
 body { margin: 0; }
 [hidden] { display: none !important; }
 
 :root {
-  --bg: #FFFFFF; --surface: #FFFFFF; --tint: #EEF5FF; --ink: #16213A; --muted: #465268; --line: #C9D4E4;
-  --gap: #A9441A; --gap-soft: #FDEBDD; --ai: #1D5C96; --ai-soft: #DDEBFA; --ok: #1F6E43; --ok-soft: #E4F4EB; --neutral-soft: #EDF1F6;
+  /* UI colors follow the Mass.gov Mayflower palette (blue #14558F, near-black #141414, gray #535353, light gray #F2F2F2). */
+  --bg: #FFFFFF; --surface: #FFFFFF; --tint: #EDF3F9; --ink: #141414; --muted: #535353; --line: #CCD5DF; --page: #F2F2F2;
+  --brand: #14558F; --brand-dark: #0C3963; --accent: #F6C51B; --berry: #680A1D;
+  --gap: #A9441A; --gap-soft: #FDEBDD; --ai: #14558F; --ai-soft: #DCE8F4; --ok: #1F6E43; --ok-soft: #E4F4EB; --neutral-soft: #EEF0F2;
   --focus: #0B57D0; --edge: rgba(22, 33, 58, .45);
   --c-cap: #A9441A; --c-use: #2C7A4E; --c-ads: #1D5C96;
   --p1: #D9DEE5; --p2: #E8B48F; --p3: #D07A45; --p4: #9C3A12;
-  --f-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --f-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-  --r: 6px; --r-sm: 4px;
+  --f-ui: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --f-display: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --r: 0px; --r-sm: 0px;
   color-scheme: light;
 }
 
@@ -382,3 +384,97 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .sigbars .baxis { margin-right: 4em; }
 .sigbars .btrack { margin-right: 4em; }
 .bl .aimark { margin-left: 8px; }
+
+/* ---------- Mass.gov-style shell: full-width bands ---------- */
+.in { max-width: 66rem; margin-inline: auto; padding-inline: max(18px, env(safe-area-inset-left, 0px)); }
+.wrap { max-width: 66rem; padding-block: 28px 64px; }
+.govbar { background: var(--page); color: var(--muted); font-size: .82rem; border-bottom: 1px solid var(--line); }
+.govbar .in { padding-block: 6px; }
+.masthead { background: #fff; border-bottom: 4px solid var(--brand); }
+.mastrow { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; padding-block: 18px; }
+.brand { display: flex; gap: 14px; align-items: center; color: var(--brand); text-decoration: none; }
+.brand .mark { width: 46px; height: 46px; flex: none; }
+.brand .word { display: grid; line-height: 1.15; }
+.brand .word b { font-size: 1.7rem; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.brand .word small { font-size: .9rem; color: var(--muted); font-weight: 500; }
+.mastctl { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.masthead nav.tabs { max-width: 66rem; margin-inline: auto; padding-inline: max(18px, env(safe-area-inset-left, 0px)); gap: 0 4px; }
+.masthead nav.tabs a { padding: 12px 14px 10px; border-bottom: 4px solid transparent; margin-bottom: -4px; color: var(--ink); }
+.masthead nav.tabs a:first-child { margin-left: -14px; }
+.masthead nav.tabs a:hover { background: var(--tint); border-bottom-color: var(--line); }
+.masthead nav.tabs a[aria-current="page"] { color: var(--brand); border-bottom-color: var(--accent); background: none; }
+.sitefoot { background: var(--brand-dark); color: #E6EEF6; font-size: .92rem; }
+.sitefoot .in { display: grid; gap: 10px; padding-block: 32px 40px; max-width: 66rem; }
+.sitefoot a { color: #fff; }
+.sitefoot p { max-width: 80ch; }
+.panel { border-width: 1px; border-color: var(--line); }
+.panel h3, .viewhead h2, .occhead h2 { letter-spacing: -.01em; }
+.viewhead h2, .occhead h2 { font-size: 2rem; }
+.btn, .seg, .chip { border-width: 2px; }
+.seg[aria-pressed="true"], .chip[aria-pressed="true"], .btn.primary { background: var(--brand); border-color: var(--brand); }
+.find { background: var(--tint); border-left: 6px solid var(--brand); }
+.pill { border-radius: 0; }
+.vbadge { border-radius: 0; }
+@media (max-width: 640px) {
+  .brand .word b { font-size: 1.35rem; }
+  .masthead nav.tabs { overflow-x: auto; flex-wrap: nowrap; white-space: nowrap; scrollbar-width: none; }
+}
+
+/* ---------- overview ---------- */
+.overview { display: grid; gap: 40px; }
+.hero { display: grid; gap: 18px; padding: 40px 36px; background: var(--brand); color: #fff; }
+.hero h2 { font-size: 2.6rem; line-height: 1.12; font-weight: 700; letter-spacing: -.015em; max-width: 20ch; }
+.herolede { font-size: 1.25rem; max-width: 52ch; color: #E6EEF6; }
+.hero .btn { border-color: #fff; }
+.hero .btn.primary { background: #fff; color: var(--brand); border-color: #fff; }
+.hero .btn:not(.primary) { background: transparent; color: #fff; }
+.hero .btn:not(.primary):hover { background: rgba(255,255,255,.12); }
+.band { display: grid; gap: 20px; padding: 32px 36px; background: var(--page); border-top: 4px solid var(--accent); }
+.band.light { background: var(--tint); border-top-color: var(--brand); }
+.band h2, .sech { font-size: 1.6rem; font-weight: 700; letter-spacing: -.01em; }
+.bandtext { font-size: 1.12rem; max-width: 64ch; }
+.stats3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 16px; }
+.bigstat { display: grid; gap: 4px; align-content: start; padding: 20px; background: #fff; border: 1px solid var(--line); }
+.bigstat .v { font-size: 2.4rem; font-weight: 700; color: var(--brand); line-height: 1.05; font-variant-numeric: tabular-nums; }
+.bigstat .k { font-weight: 600; }
+.bigstat .s { color: var(--muted); font-size: .88rem; }
+.steps { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 16px; }
+.step { display: grid; gap: 10px; align-content: start; padding: 20px; border: 1px solid var(--line); border-top: 4px solid var(--brand); }
+.step .num { width: 36px; height: 36px; display: grid; place-items: center; background: var(--brand); color: #fff; font-weight: 700; }
+.step h3 { font-size: 1.15rem; }
+.step p { color: var(--muted); }
+.ticks { list-style: none; padding: 0; display: grid; gap: 10px; }
+.ticks li { padding-left: 28px; position: relative; }
+.ticks li::before { content: "✓"; position: absolute; left: 0; color: var(--ok); font-weight: 700; }
+.shortlist { list-style: none; padding: 0; display: grid; gap: 8px; }
+.pilotgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 16px; }
+.pilotgrid dt { font-weight: 700; color: var(--brand); text-transform: uppercase; font-size: .82rem; letter-spacing: .05em; }
+.pilotgrid dd { margin: 4px 0 0; }
+
+/* ---------- skills market ---------- */
+.mktview { display: grid; gap: 28px; }
+.mktaxis { position: relative; height: 1.4em; margin-right: 4em; color: var(--muted); font-size: .85rem; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.mktaxis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.mktaxis span:first-child { transform: none; }
+.mktaxis span:last-child { transform: translateX(-100%); }
+.mkt { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
+.mkthead { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.flag { font-size: .8rem; font-weight: 700; padding: 1px 8px; text-transform: uppercase; letter-spacing: .04em; }
+.f-short { background: #FBE3D6; color: #8A2E0E; }
+.f-bal { background: var(--neutral-soft); color: var(--muted); }
+.f-surp { background: var(--ok-soft); color: var(--ok); }
+.idx { color: var(--muted); font-size: .92rem; font-variant-numeric: tabular-nums; }
+.mktbars { display: grid; gap: 3px; margin-top: 6px; }
+.mrow { display: flex; align-items: center; }
+.mtrack { position: relative; flex: 1; height: 12px; }
+.mfill { position: absolute; left: 0; top: 0; bottom: 0; min-width: 2px; }
+.mfill.d { background: var(--brand); } .mfill.s { background: var(--ok); }
+.mval { width: 4em; padding-left: 8px; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.act { border-left: 6px solid #8A2E0E; }
+.actlist { padding-left: 22px; display: grid; gap: 12px; }
+.actlist li { display: grid; gap: 2px; }
+.actlist .jobs { color: var(--muted); font-size: .92rem; }
+@media (max-width: 640px) { .hero, .band { padding: 26px 20px; } .hero h2 { font-size: 2rem; } }
+.mastctl .seg { min-height: 38px; padding: 4px 12px; font-size: .9rem; }
+.mastctl .rolelabel { font-size: .9rem; }
+.mastctl .melink { font-size: .9rem; }

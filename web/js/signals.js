@@ -123,6 +123,7 @@ function samplesFor(soc, plan) {
     const usesAI = side === 'employer' || r() < 0.65;
     const aiOn = usesAI ? picked.filter((k) => use.includes(k)).slice(0, 2) : [];
     if (usesAI && r() < 0.5) { picked.push('ai-assist'); aiOn.push('ai-assist'); }
+    if (side === 'worker' && usesAI && r() < 0.2) picked.push('ai-check');
     const growing = side === 'employer' ? [...new Set(['ai-assist', r() < 0.5 ? 'ai-check' : 'automation', ...lean.slice(0, 1)])] : [];
     const notes = NOTES[soc]?.[side];
     const note = notes ? notes[i % notes.length] : TEMPLATE[side](picked, side === 'worker' ? aiOn : growing);
@@ -214,4 +215,30 @@ export function badges(act) {
     ['Good neighbor', 'Confirmed 3 signals', c >= 3],
     ['Trusted', 'Had a signal verified', verified >= 1],
   ];
+}
+
+/* ---------- skills market index ---------- */
+// Demand: employer signals naming a skill (used = 1, becoming more important = 2).
+// Supply: verified worker signals naming the skill. Index = demand share ÷ supply share.
+// Above SHORT means employers want it more than verified workers report it; below SURPLUS the reverse.
+export const SHORT = 1.25, SURPLUS = 0.8, MIN_MENTIONS = 4;  // fewer mentions than this: too few signals to call
+export function market(list) {
+  const d = {}, s = {};
+  for (const sig of list) {
+    if (sig.side === 'employer') {
+      for (const k of sig.skills) d[k.id] = (d[k.id] || 0) + 1;
+      for (const g of sig.growing || []) d[g] = (d[g] || 0) + 2;
+    } else if (isVerified(sig)) {
+      for (const k of sig.skills) s[k.id] = (s[k.id] || 0) + 1;
+    }
+  }
+  const dT = Object.values(d).reduce((a, b) => a + b, 0) || 1, sT = Object.values(s).reduce((a, b) => a + b, 0) || 1;
+  const rows = [...new Set([...Object.keys(d), ...Object.keys(s)])].map((id) => {
+    const ds = (d[id] || 0) / dT, ss = (s[id] || 0) / sT;
+    const index = ss ? ds / ss : (ds ? Infinity : 0);
+    return {id, demand: d[id] || 0, supply: s[id] || 0, ds, ss, index,
+      flag: (d[id] || 0) + (s[id] || 0) < MIN_MENTIONS ? 'thin' : index >= SHORT ? 'shortage' : index <= SURPLUS ? 'surplus' : 'balanced'};
+  }).filter((r) => r.demand + r.supply >= 2);
+  rows.sort((a, b) => (a.flag === 'thin') - (b.flag === 'thin') || b.index - a.index || b.demand - a.demand);
+  return {rows, employers: list.filter((x) => x.side === 'employer').length, verifiedWorkers: list.filter((x) => x.side === 'worker' && isVerified(x)).length};
 }

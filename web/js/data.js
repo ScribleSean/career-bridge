@@ -15,7 +15,9 @@ async function getJSON(name, optional = false) {
 }
 
 export async function loadData() {
-  const [atlas, cb] = await Promise.all([getJSON('atlas.json'), getJSON('careerbridge.json', true)]);
+  // The licensed Lightcast layer is only requested when the page opts in with <meta name="cb-lightcast">.
+  const wantLc = !!document.querySelector('meta[name="cb-lightcast"]');
+  const [atlas, cb] = await Promise.all([getJSON('atlas.json'), wantLc ? getJSON('careerbridge.json', true) : null]);
   return {atlas, cb: cb && Array.isArray(cb.occ) ? cb : null};
 }
 
