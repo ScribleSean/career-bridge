@@ -8,9 +8,12 @@ Massachusetts career tool for the Human Edge Studio challenge (SG+I, Oct 2026). 
 - Lightcast leads. Exposure groups use Lightcast bands: index above 50 = high; MA ads at or above the 2025 state rate (6.18%) = employers asking; silent gap = under 1%.
 - Never say "at risk" or "automatable". Exposure is overlap, not job loss.
 
-## Skill signals
-- `web/js/signals.js` (data, samples, storage) and `web/js/views/signals.js` (feed, post, profile, job panel). Static demo: samples are generated and labeled Sample; user posts and confirms live in localStorage only.
+## Survey
+- The product is a short AI-at-work survey for three silent-gap jobs (`web/js/survey.js`: questions, sample responses, totals) with results published only as totals (`web/js/views/survey.js`). Groups under `MIN_CELL` (10) responses are hidden. Sample responses are made up and always labeled as samples.
+- Never imply a MassHire, Lightcast or state relationship. Proposals are marked "Proposed".
+- AI metrics are named "AI use (Anthropic Economic Index)", not after a product. Nearby jobs are ranked by skill match and pay, never by lower AI use.
 - Static site: `./build-site.sh` → `site/` (open data only; never copies Lightcast files). Live at https://scriblesean.github.io/career-bridge/ from the `gh-pages` branch: to update, rebuild and force-push `site/` as the only commit on `gh-pages`.
+- README clips: `node docs/media/record.mjs` with the app running on :8000.
 
 ## UI
 - No taglines, subtitles, footnotes or helper sentences. A panel is a title, source tags (`src()`), and content. If a screen needs explaining, fix the layout; explanations and caveats live on the About page.
@@ -19,5 +22,5 @@ Massachusetts career tool for the Human Edge Studio challenge (SG+I, Oct 2026). 
 - Verdicts are short pills, results one line.
 
 ## Check before pushing
-- `python -m unittest discover -s tests` and `node --test tests/scenario.test.mjs`
-- Load `./demo.sh`, open a job, the board, Compare jobs and About; no console errors.
+- `python -m unittest discover -s tests` and `node --test tests/`
+- Load the app, open the overview, the survey, the results, a job and About; no console errors.

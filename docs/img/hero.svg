@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" role="img" aria-labelledby="t d">
-  <title id="t">Career Bridge: a public skills signal for Massachusetts</title>
-  <desc id="d">Workers and employers send skill signals. Coworkers, employers and career centers verify them. The skills market compares employer demand with verified worker supply and flags shortages.</desc>
+  <title id="t">Career Bridge: how people in Massachusetts silent-gap jobs actually use AI</title>
+  <desc id="d">Workers and employers answer a short survey about the work and AI. Answers become totals only, with small groups hidden. The results compare what workers do with AI and what employers say is becoming more important. Sample data.</desc>
   <style>
     text { font-family: 'Noto Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #141414; }
     .muted { fill: #535353; }
@@ -42,7 +42,7 @@
     <path d="M6 27h28M9 27c3-9 19-9 22 0M12 27v-5M20 27v-8M28 27v-5" stroke="#fff" stroke-width="2.6" fill="none"/>
     <text x="54" y="29" font-size="30" font-weight="700">Career Bridge</text>
   </g>
-  <text x="48" y="104" font-size="19" class="muted">Workers and employers say what jobs really use. People who know the work confirm it.</text>
+  <text x="48" y="104" font-size="19" class="muted">How are people in these jobs actually using AI? A short survey, published only as totals.</text>
 
   <!-- workers -->
   <g transform="translate(48 140)">
@@ -66,17 +66,17 @@
   <path d="M600 280 V 318" stroke="#14558F" stroke-width="2" class="flow" opacity=".45"/>
 
   <!-- verification node -->
-  <circle class="loop ring" cx="600" cy="228" r="46" fill="none" stroke="#1F6E43" stroke-width="3"/>
+  <circle class="loop ring" cx="600" cy="228" r="46" fill="none" stroke="#14558F" stroke-width="3"/>
   <g class="loop pulse">
-    <circle cx="600" cy="228" r="46" fill="#1F6E43"/>
-    <path d="M581 229 l13 13 l25 -27" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="square"/>
+    <circle cx="600" cy="228" r="46" fill="#14558F"/>
+    <rect x="584" y="226" width="32" height="24" fill="#fff"/><path d="M590 226 v-8 a10 10 0 0 1 20 0 v8" stroke="#fff" stroke-width="5" fill="none"/><rect x="597" y="232" width="6" height="10" fill="#14558F"/>
   </g>
-  <text x="600" y="150" font-size="15" font-weight="700" text-anchor="middle" fill="#1F6E43" letter-spacing="1.5">VERIFIED</text>
-  <text x="600" y="170" font-size="14" text-anchor="middle" class="muted">coworkers · employers · career centers</text>
+  <text x="600" y="150" font-size="15" font-weight="700" text-anchor="middle" fill="#14558F" letter-spacing="1.5">TOTALS ONLY</text>
+  <text x="600" y="170" font-size="14" text-anchor="middle" class="muted">no names · groups under 10 hidden</text>
 
   <!-- traveling signal chips -->
-  <g class="chip loop c1" opacity="0"><rect width="140" height="32" fill="#DCE8F4"/><text x="12" y="21">Scheduling</text></g>
-  <g class="chip loop c2" opacity="0"><rect width="180" height="32" fill="#FDEBDD"/><text x="12" y="21">Checking AI output</text></g>
+  <g class="chip loop c1" opacity="0"><rect width="168" height="32" fill="#DCE8F4"/><text x="12" y="21">Scheduling · no AI</text></g>
+  <g class="chip loop c2" opacity="0"><rect width="180" height="32" fill="#FDEBDD"/><text x="12" y="21">Checking AI output ↑</text></g>
   <g class="chip loop c3" opacity="0"><rect width="206" height="32" fill="#DCE8F4"/><text x="12" y="21">Using AI assistants</text><rect x="176" y="9" width="22" height="14" fill="#2C7A4E"/><text x="179" y="20" font-size="10" class="w">AI</text></g>
   <g class="chip loop c4" opacity="0"><rect width="180" height="32" fill="#FDEBDD"/><text x="12" y="21">Using AI assistants</text></g>
 
@@ -84,29 +84,29 @@
   <g transform="translate(330 322)">
     <rect width="540" height="210" fill="#F2F2F2"/>
     <rect width="540" height="4" fill="#F6C51B"/>
-    <text x="24" y="38" font-size="18" font-weight="700">Skills market</text>
+    <text x="24" y="38" font-size="18" font-weight="700">Survey results <tspan font-weight="400" font-size="14" fill="#535353">· sample</tspan></text>
     <g transform="translate(330 26)">
-      <rect width="12" height="12" fill="#14558F"/><text x="18" y="11" font-size="13" class="muted">Employer demand</text>
-      <rect y="18" width="12" height="12" fill="#1F6E43"/><text x="18" y="29" font-size="13" class="muted">Verified supply</text>
+      <rect width="12" height="12" fill="#A9441A"/><text x="18" y="11" font-size="13" class="muted">Employers: more important</text>
+      <rect y="18" width="12" height="12" fill="#1F6E43"/><text x="18" y="29" font-size="13" class="muted">Workers: do it with AI</text>
     </g>
     <!-- rows -->
     <g transform="translate(24 76)">
-      <text y="0" font-size="15" font-weight="600">Using AI assistants</text>
-      <rect class="loop bar" x="190" y="-14" width="260" height="10" fill="#14558F"/>
-      <rect class="loop bar" x="190" y="-1" width="80" height="10" fill="#1F6E43"/>
-      <g class="loop tag" opacity="0"><rect x="400" y="6" width="92" height="20" fill="#FBE3D6"/><text x="408" y="21" font-size="12" font-weight="700" fill="#8A2E0E" letter-spacing="1">SHORTAGE</text></g>
+      <text y="0" font-size="15" font-weight="600">Checking AI output</text>
+      <rect class="loop bar" x="190" y="-14" width="250" height="10" fill="#A9441A"/>
+      <rect class="loop bar" x="190" y="-1" width="160" height="10" fill="#1F6E43"/>
+      <g class="loop tag" opacity="0"><rect x="364" y="6" width="128" height="20" fill="#FBE3D6"/><text x="372" y="21" font-size="12" font-weight="700" fill="#8A2E0E" letter-spacing="1">EMPLOYERS AHEAD</text></g>
     </g>
     <g transform="translate(24 128)">
-      <text y="0" font-size="15" font-weight="600">Checking AI output</text>
-      <rect class="loop bar b2" x="190" y="-14" width="150" height="10" fill="#14558F"/>
-      <rect class="loop bar b2" x="190" y="-1" width="50" height="10" fill="#1F6E43"/>
-      <g class="loop tag2" opacity="0"><rect x="400" y="6" width="92" height="20" fill="#FBE3D6"/><text x="408" y="21" font-size="12" font-weight="700" fill="#8A2E0E" letter-spacing="1">SHORTAGE</text></g>
+      <text y="0" font-size="15" font-weight="600">Using AI assistants</text>
+      <rect class="loop bar b2" x="190" y="-14" width="180" height="10" fill="#A9441A"/>
+      <rect class="loop bar b2" x="190" y="-1" width="260" height="10" fill="#1F6E43"/>
+      <g class="loop tag2" opacity="0"><rect x="364" y="6" width="128" height="20" fill="#E4F4EB"/><text x="372" y="21" font-size="12" font-weight="700" fill="#1F6E43" letter-spacing="1">WORKERS AHEAD</text></g>
     </g>
     <g transform="translate(24 180)">
       <text y="0" font-size="15" font-weight="600">Scheduling</text>
-      <rect class="loop bar b3" x="190" y="-14" width="40" height="10" fill="#14558F"/>
-      <rect class="loop bar b3" x="190" y="-1" width="140" height="10" fill="#1F6E43"/>
+      <rect class="loop bar b3" x="190" y="-14" width="30" height="10" fill="#A9441A"/>
+      <rect class="loop bar b3" x="190" y="-1" width="20" height="10" fill="#1F6E43"/>
     </g>
   </g>
-  <text x="48" y="548" font-size="12" class="muted">Independent student project. Not affiliated with MassHire or the Commonwealth of Massachusetts. Sample data.</text>
+  <text x="48" y="548" font-size="12" class="muted">Independent student project. Not affiliated with MassHire, Lightcast or the Commonwealth of Massachusetts. Sample data.</text>
 </svg>

@@ -1,62 +1,53 @@
-// Overview: the case for Career Bridge as shared public infrastructure, written for state and workforce leaders.
+// Overview: the finding, the survey that follows from it, and a small pilot. Written for state and workforce leaders.
 import {h} from '../util.js';
-import {SKILL, allSignals, market} from '../signals.js';
+import {JOBS, totals} from '../survey.js';
 
-const MASSHIRE_URL = 'https://www.mass.gov/orgs/masshire-department-of-career-services';
+const pct = (v) => (v == null ? '—' : `${Math.round(v * 100)}%`);
 
 export function renderOverview(root, ctx) {
-  const m = market(allSignals(ctx.model));
-  const short = m.rows.filter((r) => r.flag === 'shortage').slice(0, 3);
+  const {model} = ctx;
   const step = (n, title, body) => h('li', {class: 'step'}, h('span', {class: 'num', 'aria-hidden': 'true'}, n), h('div', {}, h('h3', {}, title), h('p', {}, body)));
-  const stat = (v, k, s) => h('div', {class: 'bigstat'}, h('span', {class: 'v'}, v), h('span', {class: 'k'}, k), s ? h('span', {class: 's'}, s) : null);
+  const t = totals(JOBS[0].soc, model.plans);
 
   root.replaceChildren(h('div', {class: 'overview'},
     h('section', {class: 'hero'},
-      h('h2', {id: 'view-title', tabindex: '-1'}, 'A public skills signal for Massachusetts'),
-      h('p', {class: 'herolede'}, 'Workers and employers say which skills jobs really use. People who know the work confirm it. Career centers and training providers could see where the gaps are, by skill and region.'),
-      h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: '#/market'}, 'See the skills market'), h('a', {class: 'btn', href: '#/signals'}, 'Browse skill signals'))),
+      h('h2', {id: 'view-title', tabindex: '-1'}, 'How are people in these jobs actually using AI?'),
+      h('p', {class: 'herolede'}, 'Job ads show what employers ask for. They don’t show what people in the job do with AI. Career Bridge is a short, repeatable survey that asks workers and employers directly, published only as totals.'),
+      h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: '#/results'}, 'See sample results'), h('a', {class: 'btn', href: '#/survey'}, 'Try the survey'))),
 
-    h('section', {class: 'band'}, h('h2', {}, 'The signal is missing'),
-      h('div', {class: 'stats3'},
-        stat('526,000', 'Massachusetts workers in the silent gap', 'Jobs with high AI overlap where under 1% of job ads ask for AI skills (Lightcast, 2025; BLS OEWS)'),
-        stat('6.18%', 'of Massachusetts job ads ask for any AI skill', 'Lightcast, 2025'),
-        stat('Years', 'for official skill lists to update', 'O*NET surveys refresh job by job over several years')),
-      h('p', {class: 'bandtext'}, 'Employers aren’t telling workers what they need, and job ads are a slow, noisy proxy. Workers can’t tell what to learn, and training money can’t tell where to go.')),
+    h('section', {class: 'band'}, h('h2', {}, 'What we found'),
+      h('div', {class: 'finding'},
+        h('span', {class: 'v'}, '526,000'),
+        h('p', {}, h('b', {}, 'Massachusetts workers are in jobs where AI overlaps with much of the work, yet under 1% of job ads for those jobs mention AI skills.'),
+          h('span', {class: 's'}, ' Jobs scoring above 50 on the Lightcast AI Exposure Index with under 1% of 2025 Massachusetts job ads asking for any AI skill; workers from BLS OEWS May 2025. Human Edge Studio analysis, October 2026.'))),
+      h('p', {class: 'bandtext'}, 'Employers aren’t saying it in ads. That could mean these jobs don’t need AI skills, or that people are already using AI and no one is asking. Ads can’t tell the difference. Asking people can.')),
 
-    h('section', {}, h('h2', {class: 'sech'}, 'How it works'),
+    h('section', {}, h('h2', {class: 'sech'}, 'The survey'),
       h('ol', {class: 'steps'},
-        step('1', 'Workers signal', 'Say which skills your job really uses, and where AI helps. From a shared list built on O*NET, plus new skills it doesn’t track yet.'),
-        step('2', 'Employers signal', 'Say what a role needs and which skills are becoming more important. A direct signal, not a job ad.'),
-        step('3', 'People verify', 'Coworkers vouch. Employers and career centers verify. Nobody confirms their own.'),
-        step('4', 'The market adds it up', 'Demand from employers against verified supply from workers, by skill and region. Shortages show where training should go.'))),
+        step('1', 'Ask', 'About five minutes. Workers say which work activities they do and where AI helps. Employers say what the role needs and what is becoming more important.'),
+        step('2', 'Line it up', 'Built on O*NET work activities, so answers match federal data and Lightcast skills, plus three AI activities O*NET doesn’t track yet, like checking AI output.'),
+        step('3', 'Publish totals', 'Results by job and region only. No names, no company names, and any group under 10 responses is hidden.'),
+        step('4', 'Act', 'A workforce board sees who is already using AI, what employers want next, and who should get AI training.'))),
 
-    short.length ? h('section', {class: 'panel'}, h('h3', {}, 'Shortages in the demo market (sample data)'),
-      h('ul', {class: 'shortlist'}, short.map((r) => h('li', {}, h('b', {}, SKILL[r.id].label), ` · employers want it ${r.index === Infinity ? 'with no verified supply yet' : r.index.toFixed(1) + '× more than verified workers report it'}`))),
-      h('p', {}, h('a', {href: '#/market'}, 'Open the skills market'), ' · sample data')) : null,
+    h('section', {class: 'panel'}, h('h3', {}, 'Three jobs to start'),
+      h('ul', {class: 'jobcards'}, JOBS.map((j) => {
+        const o = model.bySoc.get(j.soc);
+        return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
+          o ? h('p', {}, h('b', {}, Math.round(o.jobs).toLocaleString('en-US')), ' Massachusetts workers · median pay ', h('b', {}, '$' + Math.round(o.wage).toLocaleString('en-US'))) : null,
+          h('p', {class: 'fine'}, 'BLS OEWS May 2025'),
+          h('div', {class: 'actions'}, h('a', {class: 'btn', href: ctx.hrefJob(j.soc)}, 'Job details'), h('a', {class: 'btn', href: `#/results?job=${j.soc}`}, 'Sample results')));
+      })),
+      h('p', {class: 'fine'}, `In the sample results for administrative assistants, ${pct(t.useAnyAI)} of workers use an AI tool for work and ${pct(t.adsMentionAI)} of employers mention AI in ads. These are made-up numbers that show how a result would read.`)),
 
-    h('section', {class: 'two'},
-      h('div', {class: 'panel'}, h('h3', {}, 'Proposed: why public infrastructure'),
-        h('ul', {class: 'ticks'},
-          h('li', {}, 'Free for workers and employers. No ads, no selling data.'),
-          h('li', {}, 'Neutral ground: no single employer or vendor owns the signal.'),
-          h('li', {}, 'Plugs into what exists: MassHire career centers could verify and route training funds.'),
-          h('li', {}, 'One open skills vocabulary built on O*NET, so the data works with federal and state systems.'))),
-      h('div', {class: 'panel'}, h('h3', {}, 'Proposed: privacy and governance'),
-        h('ul', {class: 'ticks'},
-          h('li', {}, 'Workers would choose what to share, with names private unless they opt in.'),
-          h('li', {}, 'Employers would be verified, for example through MassHire, before their signals count.'),
-          h('li', {}, 'Only totals by skill and region would be published, never individual records.'),
-          h('li', {}, 'AI overlap is shown as overlap, never as a prediction of job loss.')))),
-
-    h('section', {class: 'panel pilot'}, h('h3', {}, 'Proposed: a 90-day pilot'),
+    h('section', {class: 'panel pilot'}, h('h3', {}, 'Proposed: a one-quarter pilot'),
       h('dl', {class: 'pilotgrid'},
-        h('div', {}, h('dt', {}, 'Where'), h('dd', {}, 'One MassHire region, such as Central Massachusetts')),
-        h('div', {}, h('dt', {}, 'Jobs'), h('dd', {}, 'Three silent-gap jobs: administrative assistants, customer service representatives, retail salespeople')),
-        h('div', {}, h('dt', {}, 'Partners'), h('dd', {}, 'The regional MassHire career center and workforce board, a community college, 20 to 30 employers')),
-        h('div', {}, h('dt', {}, 'Goal'), h('dd', {}, '500 worker signals, 60% verified, and one training cohort aimed at a verified shortage'))),
-      h('p', {}, h('a', {href: MASSHIRE_URL, target: '_blank', rel: 'noopener'}, 'About MassHire'), ' · Career Bridge is an independent student project, not affiliated with MassHire.')),
+        h('div', {}, h('dt', {}, 'Where'), h('dd', {}, 'One region, run with its MassHire workforce board, for example Central Massachusetts')),
+        h('div', {}, h('dt', {}, 'How'), h('dd', {}, 'Through channels people already use: career center intake and workforce board employer meetings. No new site to join.')),
+        h('div', {}, h('dt', {}, 'Size'), h('dd', {}, 'About 100 worker responses and 25 employer responses for each of the three jobs')),
+        h('div', {}, h('dt', {}, 'Result'), h('dd', {}, 'A short report the board can use to target AI training, such as the state’s free AI courses, and a question set it can repeat each year'))),
+      h('p', {class: 'fine'}, 'Career Bridge is an independent student project. It is not affiliated with MassHire, Lightcast or the Commonwealth of Massachusetts.')),
 
-    h('section', {class: 'band light'}, h('h2', {}, 'For workers today'),
-      h('p', {class: 'bandtext'}, 'Look up any job for pay, growth, how much people already use AI on the work, and a plan with nearby jobs and the skills to build.'),
-      h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: ctx.hrefJob('43-6014')}, 'Look up a job'), h('a', {class: 'btn', href: '#/post'}, 'Post a skill signal')))));
+    h('section', {class: 'band light'}, h('h2', {}, 'For career counselors'),
+      h('p', {class: 'bandtext'}, 'Look up any job for pay, growth, training, how much AI is already used on the work, and nearby jobs with the skills to build. Every number names its source.'),
+      h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: ctx.hrefJob('43-6014')}, 'Look up a job')))));
 }

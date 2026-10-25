@@ -1,22 +1,14 @@
-// One job: Lightcast standing and panels first (private builds, when careerbridge.json is loaded), then Claude use,
-// the career plan, and the 2031 what-if. Design rule: no subtitles, footnotes or helper text; titles, scales and
+// One job, for career counselors: Lightcast standing and panels first (private builds, when careerbridge.json is
+// loaded), then AI use, the survey summary for the three survey jobs, and the career plan. Design rule: no subtitles, footnotes or helper text; titles, scales and
 // source tags carry the meaning, and explanations live on the About page.
-import {h, fmt, announce, src, experimental} from '../util.js';
+import {h, fmt, announce, src} from '../util.js';
 import {lineChart, barList} from '../charts.js';
-import {trendJobs, pathJobs, jobs2031, presetOf} from '../scenario.js';
-import {jobSignals} from './signals.js';
+import {jobSurvey} from './survey.js';
 
-export const POSTURE = {
-  'Stay the course': ['calm', 'Keep building', 'Claude isn’t used much on this kind of work today. Keep learning, and check back now and then.'],
-  'Upskill in place': ['mid', 'Get good with AI', 'Some of this work is where people use Claude. Learn to use it well and you’ll be ahead of the pack.'],
-  'Stay and reposition': ['high', 'Shift your focus', 'A lot of this work is where Claude gets used, but these jobs have held steady. Spend more of your time on the parts that need a person.'],
-  'Prepare to move': ['urgent', 'Explore nearby jobs', 'A lot of this work is where Claude gets used, and the 2031 what-if shows fewer of these jobs. Building skills for a nearby job now keeps your options open.'],
-};
-export const postureLabel = (p) => (POSTURE[p] ? POSTURE[p][1] : '—');
 
 const GAP = 'High exposure, low adoption', HIHI = 'High exposure, high adoption', LOHI = 'Lower exposure, high adoption', LOLO = 'Lower exposure, low adoption';
 
-const SOURCES = {'What people in this job report': ['sig'], 'Where this job stands with AI': ['lc'], 'How much people use Claude on this work': ['aei', 'onet'], 'What if: jobs in 2031': ['oewsh', 'aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
+const SOURCES = {'Where this job stands with AI': ['lc'], 'How much AI is used on this work': ['aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
   'Job ads asking for AI skills': ['lc'], 'Is this job following software?': ['lc'], 'Job growth in Massachusetts': ['oewsh'],
   'What people use AI for in this job': ['aei', 'onet', 'lc'], 'Your human edge and what employers ask for': ['lc', 'onet']};
 // No subtitles or footnotes: a panel is its title, its source tags, and its content. Explanations live on the About page.
@@ -28,13 +20,11 @@ const fold = (summary, ...kids) => h('details', {class: 'more'}, h('summary', {}
 
 /* ------------------------------------------------------------------ header and the short answer */
 function header(ctx, o) {
-  const [cls, label] = POSTURE[o.posture] || ['mid', o.posture];
   const geo = ctx.state.geo === 'MA' ? 'MA' : 'US';
   // Lightcast verdict first (private build), then the plan's suggestion. Short pills, no sentences.
   const pills = [
     o.lc?.silent_gap ? h('span', {class: 'pill gap'}, 'Silent gap') : null,
-    o.lc && !o.lc.silent_gap && QSHORT[o.lc.quadrant] ? h('span', {class: 'pill ' + (o.lc.quadrant === GAP ? 'gap' : 'neutral')}, QSHORT[o.lc.quadrant]) : null,
-    h('span', {class: 'pill ' + cls}, label)];
+    o.lc && !o.lc.silent_gap && QSHORT[o.lc.quadrant] ? h('span', {class: 'pill ' + (o.lc.quadrant === GAP ? 'gap' : 'neutral')}, QSHORT[o.lc.quadrant]) : null];
   return h('header', {class: 'occhead'},
     h('span', {class: 'grp'}, o.group),
     h('h2', {id: 'occ-title', tabindex: '-1'}, o.title),
@@ -66,8 +56,8 @@ const WORD = {0: 'lowest', 50: 'median', 100: 'highest'};
 const named = (anchors, f) => anchors.map(([pos, v]) => [pos, `${f(v)} · ${WORD[pos]}`]);
 
 function standing(ctx, o) {
-  return panel('How much people use Claude on this work',
-    h('ul', {class: 'rulers'}, ruler('use', 'circle', 'Claude use', Math.round(o.z), o.basis === 'content only (AEI withheld)' ? 'Estimated from tasks' : `${Math.round(o.z)} of 100`,
+  return panel('How much AI is used on this work',
+    h('ul', {class: 'rulers'}, ruler('use', 'circle', 'AI use (Anthropic Economic Index)', Math.round(o.z), o.basis === 'content only (AEI withheld)' ? 'Estimated from tasks' : `${Math.round(o.z)} of 100`,
       [[0, '0'], [50, '50'], [100, '100']])));
 }
 
@@ -82,73 +72,15 @@ function lightcastStanding(ctx, o) {
         named(m.demandAnchors, adsFmt), {pos: m.demandRank(state), label: `State ${state}%`})));
 }
 
-/* ------------------------------------------------------------------ scenario */
-function scenarioPanel(ctx, o) {
-  const {model, state} = ctx;
-  const sliders = {};
-  const mk = (id, label, min, max, step, val) => {
-    const out = h('output', {for: id});
-    const input = h('input', {type: 'range', id, min, max, step, value: val});
-    sliders[id] = {input, out};
-    return h('div', {class: 'slider'}, h('label', {for: id}, label), h('div', {class: 'srow'}, input, out));
-  };
-  const aRow = mk('sc-a', 'Work AI takes on by 2031', 5, 80, 5, Math.round(state.A * 100));
-  const pRow = mk('sc-p', 'Share of that which means fewer jobs', 10, 100, 10, Math.round(state.P * 100));
-  const presetBtns = Object.entries({slow: 'Slow', base: 'Medium', fast: 'Fast'}).map(([k, label]) =>
-    h('button', {type: 'button', class: 'seg', 'data-k': k, onclick: () => { sliders['sc-a'].input.value = model.presets[k].A * 100; sliders['sc-p'].input.value = model.presets[k].P * 100; update(true); }}, label));
-  const big = h('p', {class: 'bignum'});
-  const stats = h('div', {class: 'sstats'});
-  const chartBox = h('div');
-
-  function update(commit) {
-    const A = +sliders['sc-a'].input.value / 100, P = +sliders['sc-p'].input.value / 100;
-    sliders['sc-a'].out.textContent = Math.round(A * 100) + '%';
-    sliders['sc-p'].out.textContent = Math.round(P * 100) + '%';
-    sliders['sc-a'].input.setAttribute('aria-valuetext', `${Math.round(A * 100)} percent`);
-    sliders['sc-p'].input.setAttribute('aria-valuetext', `${Math.round(P * 100)} percent`);
-    ctx.setScenario(A, P);
-    const cur = presetOf(A, P, model.presets);
-    presetBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === cur)));
-    const trend = trendJobs(o, o.jobs), ai = jobs2031(o, o.jobs, A, P);
-    big.replaceChildren(h('b', {}, fmt.n(ai)), ` in 2031 · ${fmt.n(o.jobs)} today`);
-    stats.replaceChildren(
-      stat('Recent trend', fmt.n(trend), fmt.signed((trend / o.jobs - 1) * 100, 0)),
-      stat('AI what-if', fmt.n(ai), fmt.signed((ai / o.jobs - 1) * 100, 0)),
-      stat('Difference', fmt.signedN(ai - trend), fmt.signed((ai / trend - 1) * 100)));
-    const years = [0, 1, 2, 3, 4, 5, 6];
-    const all = years.flatMap((y) => [trendJobs(o, o.jobs, y), pathJobs(o, o.jobs, A, P, y)]);
-    const lo = Math.min(...all), hi = Math.max(...all), padv = (hi - lo || hi * 0.05) * 0.25;
-    chartBox.replaceChildren(lineChart({
-      series: [
-        {name: 'Recent trend', color: 'var(--muted)', dash: '5 4', shape: 'circle', points: years.map((y) => [2025 + y, trendJobs(o, o.jobs, y)])},
-        {name: 'AI what-if', color: 'var(--c-use)', shape: 'square', points: years.map((y) => [2025 + y, pathJobs(o, o.jobs, A, P, y)])},
-      ],
-      xTicks: years.filter((y) => y % 2 === 0).map((y) => [2025 + y, String(2025 + y)]), yMin: Math.max(0, lo - padv), yMax: hi + padv,
-      yFmt: (v) => fmt.compact(v), endFmt: (v) => fmt.compact(v), right: 56,
-      desc: `Jobs in ${o.title} from 2025 to 2031. If recent trends continue: ${fmt.n(trend)}. AI what-if at the chosen speed: ${fmt.n(ai)}.`,
-    }));
-    if (commit) announce(`2031 jobs: ${fmt.n(ai)} in the AI what-if, ${fmt.n(trend)} if recent trends continue.`);
-  }
-  for (const s of Object.values(sliders)) { s.input.addEventListener('input', () => update(false)); s.input.addEventListener('change', () => update(true)); }
-  update(false);
-  return panel('What if: jobs in 2031', experimental(),
-    h('div', {class: 'segs', role: 'group', 'aria-label': 'How fast AI spreads'}, presetBtns),
-    big, chartBox, stats,
-    fold('Set your own numbers', h('div', {class: 'sliders'}, aRow, pRow)));
-}
-const stat = (k, v, n) => h('div', {class: 'stat'}, h('span', {class: 'k'}, k), h('span', {class: 'v'}, v), h('span', {class: 'n'}, n));
-
 /* ------------------------------------------------------------------ career plan */
 function moveCard(ctx, o, t, extra, meta) {
-  const dz = t.z - o.z;
   const wd = t.wage != null && o.wage != null ? t.wage - o.wage : null;
   return h('li', {class: 'move'},
     h('a', {class: 't', href: ctx.hrefJob(t.soc), 'aria-label': `Open ${t.title}`}, t.title),
     h('div', {class: 'row'},
       h('span', {}, 'Median pay ', h('b', {class: wd > 0 ? 'up' : ''}, fmt.usd(t.wage)), wd != null ? ` (${fmt.usdDiff(wd)})` : ''),
       h('span', {}, h('b', {}, fmt.n(t.jobs)), ' workers'),
-      meta,
-      h('span', {}, 'Claude use ', h('b', {}, dz <= -1 ? 'lower' : 'similar'))),
+      meta),
     extra);
 }
 
@@ -161,8 +93,10 @@ function movesPanel(ctx, o, plan) {
   const draw = () => {
     list.replaceChildren();
     if (mode === 'less') {
-      const mv = (plan.moves || []).map((m) => ({m, t: model.bySoc.get(m.soc)})).filter((x) => x.t && x.t.jobs != null);
-      note.textContent = o.tier === 'Low' ? 'No move needed' : !mv.length ? 'No close match' : '';
+      // Ranked by skill match, then pay; never by lower AI use.
+      const mv = (plan.moves || []).map((m) => ({m, t: model.bySoc.get(m.soc)})).filter((x) => x.t && x.t.jobs != null)
+        .sort((a, b) => b.m.sim - a.m.sim || (b.t.wage || 0) - (a.t.wage || 0));
+      note.textContent = !mv.length ? 'No close match' : '';
       note.hidden = !note.textContent;
       for (const {m, t} of mv) {
         list.append(moveCard(ctx, o, t,
@@ -185,19 +119,19 @@ function movesPanel(ctx, o, plan) {
     }
   };
   const toggle = !paths.length ? null : h('div', {class: 'segs', role: 'group', 'aria-label': 'What kind of move'},
-    [['less', 'Less Claude use'], ['ads', 'Employers want AI skills']].map(([k, label]) =>
+    [['less', 'Similar skills'], ['ads', 'Employers want AI skills']].map(([k, label]) =>
       h('button', {type: 'button', class: 'seg', 'aria-pressed': String(k === mode), onclick: (e) => {
         mode = k; e.currentTarget.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); draw();
       }}, label)));
   draw();
-  return h('div', {class: 'block'}, h('h3', {}, 'Next moves'), toggle, note, list);
+  return h('div', {class: 'block'}, h('h3', {}, 'Jobs with similar skills'), toggle, note, list);
 }
 
 function planText(ctx, o, plan) {
   const mv = (plan.moves || []).map((m) => ctx.model.bySoc.get(m.soc)).filter(Boolean).slice(0, 3).map((t) => t.title);
-  return [`Career plan: ${o.title}`, `Suggested approach: ${postureLabel(o.posture)}. ${(POSTURE[o.posture] || [])[2] || ''}`, '',
-    `Do more of: ${plan.lean.join('; ') || 'n/a'}`, `Let Claude speed up: ${plan.use.join('; ') || 'n/a'}`, mv.length ? `Other jobs worth a look: ${mv.join('; ')}` : '', '',
-    ...plan.timeline.map((s) => `${s.when}: ${s.text}`), '', 'Source: Career Bridge. This shows where Claude is used today, not a prediction that jobs will disappear.'].filter((l, i, a) => l || a[i - 1]).join('\n');
+  return [`Career plan: ${o.title}`, '',
+    `Do more of: ${plan.lean.join('; ') || 'n/a'}`, `AI can speed up: ${plan.use.join('; ') || 'n/a'}`, mv.length ? `Jobs with similar skills: ${mv.join('; ')}` : '', '',
+    ...plan.timeline.map((s) => `${s.when}: ${s.text}`), '', 'Source: Career Bridge (O*NET 31.0, BLS OEWS, Anthropic Economic Index). AI use shows where AI is used today, not a prediction about jobs.'].filter((l, i, a) => l || a[i - 1]).join('\n');
 }
 
 function planPanel(ctx, o) {
@@ -212,7 +146,7 @@ function planPanel(ctx, o) {
   const acts = (title, items) => h('div', {class: 'twocol'}, h('h4', {}, title),
     items.length ? h('ul', {class: 'alist'}, items.map((a) => h('li', {}, a))) : h('p', {class: 'empty'}, 'Not enough data'));
   return panel('What you can do about it',
-    h('div', {class: 'two'}, acts('Do more of this', plan.lean), acts('Let Claude speed these up', plan.use)),
+    h('div', {class: 'two'}, acts('Do more of this', plan.lean), acts('AI can speed these up', plan.use)),
     movesPanel(ctx, o, plan),
     h('div', {class: 'block'}, h('h3', {}, 'Your next 12 months'),
       h('ol', {class: 'tl'}, plan.timeline.map((s) => h('li', {}, h('b', {}, s.when), h('span', {}, s.text))))),
@@ -287,9 +221,8 @@ function lightcastPanels(ctx, o) {
 
 /* ------------------------------------------------------------------ entry */
 export function renderJob(root, ctx, o) {
-  // Lightcast leads (exposure, employer demand, software path, skills); then Claude usage, the plan,
-  // and the 2031 "what if" last, so the page matches the team's deck.
+  // Lightcast leads in private builds; then AI use, the survey summary (three survey jobs), and the plan.
   const lc = ctx.model.full && o.lc ? [lightcastStanding(ctx, o), ...lightcastPanels(ctx, o)] : [];
   root.replaceChildren(h('div', {class: 'jobview'},
-    header(ctx, o), ...lc, standing(ctx, o), jobSignals(ctx, o, panel), planPanel(ctx, o), scenarioPanel(ctx, o)));
+    header(ctx, o), ...lc, standing(ctx, o), jobSurvey(ctx, o, panel), planPanel(ctx, o)));
 }

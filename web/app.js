@@ -1,67 +1,47 @@
-// Career Bridge shell: loads data, owns the shared state (place, scenario), routes, and runs the search box.
-//   #/job/<soc>   one job          #/explore?x=&y=&group=&posture=&sort=&dir=   all jobs
-//   #/board?...   workforce board (private build)          #/about
-//   #/signals?soc=&side=&region=&verified=   skill signals     #/post?soc=   post one     #/me   your profile
-// Scenario settings travel in the URL as a=<adoption %>&p=<headcount %> so a link reproduces what you see.
+// Career Bridge shell: loads data, owns the shared state (place), routes, and runs the search box.
+//   #/   overview     #/survey?job=&as=worker|employer   the survey     #/results?job=&region=   totals
+//   #/job/<soc>   one job (for career counselors)     #/board   workforce board (private build)     #/about
 import {$, h, store, announce, loading, errorBox, reduceMotion} from './js/util.js';
 import {loadData, makeModel} from './js/data.js';
 import {loadTitles, search} from './js/search.js';
 import {renderJob} from './js/views/job.js';
-import {renderExplore} from './js/views/explore.js';
 import {renderBoard} from './js/views/board.js';
 import {renderAbout} from './js/views/about.js';
-import {renderSignals, renderPost, renderMe} from './js/views/signals.js';
-import {renderMarket} from './js/views/market.js';
 import {renderOverview} from './js/views/overview.js';
-import {ROLES, role, setRole} from './js/signals.js';
+import {renderSurvey, renderResults} from './js/views/survey.js';
 
-const DEFAULT_SOC = '43-6014';  // Denise, the administrative assistant from slide 2
+const DEFAULT_SOC = '43-6014';  // administrative assistants, the first survey job
 const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'],
   ['13-2011', 'Accountant'], ['29-1141', 'Registered nurse'], ['15-1252', 'Software developer'], ['11-2021', 'Marketing manager'], ['47-2111', 'Electrician']];
 
 let data = null, model = null;
-const state = {geo: store.get('cb-geo') === 'US' ? 'US' : 'MA', A: 0.25, P: 0.5};
+const state = {geo: store.get('cb-geo') === 'US' ? 'US' : 'MA'};
 const ctx = {state, selected: null,
   get model() { return model; },
   hrefJob: (soc) => hashFor('job', {}, soc),
-  go: (view, params = {}, soc) => { location.hash = hashFor(view, params, soc); },
-  setScenario(A, P) {
-    state.A = A; state.P = P; store.set('cb-scen', `${A},${P}`);
-    history.replaceState(null, '', hashFor(...Object.values(parseHash()).slice(0, 3)));
-  }};
+  go: (view, params = {}, soc) => { location.hash = hashFor(view, params, soc); }};
 
 /* ---------- routing ---------- */
 function parseHash() {
   const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
   const parts = path.split('/').filter(Boolean);
   const params = Object.fromEntries(new URLSearchParams(query));
-  const view = !parts.length ? 'overview' : ['overview', 'market', 'explore', 'board', 'about', 'signals', 'post', 'me'].includes(parts[0]) ? parts[0] : 'job';
+  const view = !parts.length ? 'overview' : ['overview', 'survey', 'results', 'board', 'about'].includes(parts[0]) ? parts[0] : 'job';
   return {view, params, soc: view === 'job' ? decodeURIComponent(parts[1] || '') : ''};
 }
 function hashFor(view, params = {}, soc = '') {
-  const base = model?.presets.base;
   const p = {...params};
-  delete p.a; delete p.p;
-  if (base && (Math.abs(state.A - base.A) > 1e-9 || Math.abs(state.P - base.P) > 1e-9)) { p.a = Math.round(state.A * 100); p.p = Math.round(state.P * 100); }
   const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== '' && v != null)).toString();
   return `#/${view}${view === 'job' && soc ? '/' + encodeURIComponent(soc) : ''}${qs ? '?' + qs : ''}`;
 }
-function readScenario(params) {
-  const saved = (store.get('cb-scen') || '').split(',').map(Number);
-  const a = params.a != null ? +params.a / 100 : saved.length === 2 && saved[0] ? saved[0] : model.presets.base.A;
-  const p = params.p != null ? +params.p / 100 : saved.length === 2 && saved[1] ? saved[1] : model.presets.base.P;
-  state.A = Math.min(0.8, Math.max(0.05, a)); state.P = Math.min(1, Math.max(0.1, p));
-}
-
 let lastKey = null;
 let lastSoc = store.get('cb-last') || DEFAULT_SOC;
 function route() {
   const r = parseHash();
   if (r.view === 'job' && !r.soc) { history.replaceState(null, '', hashFor('job', {}, model.bySoc.has(lastSoc) ? lastSoc : DEFAULT_SOC)); return route(); }
-  if (r.view === 'board' && !model.full) { history.replaceState(null, '', hashFor('explore')); return route(); }
-  readScenario(r.params);
+  if (r.view === 'board' && !model.full) { history.replaceState(null, '', '#/'); return route(); }
   drawNav(r);
-  document.querySelector('.find').hidden = !['job', 'explore'].includes(r.view);  // job search only where it's used
+  document.querySelector('.find').hidden = r.view !== 'job';  // job search only where it's used
   const view = $('view');
   const activeId = document.activeElement && view.contains(document.activeElement) ? document.activeElement.id : '';
   let key = r.view;
@@ -76,13 +56,10 @@ function route() {
     if (document.activeElement !== $('q')) $('q').value = o.title;
     renderJob(view, ctx, o);
     document.title = `${o.title} · Career Bridge`;
-  } else if (r.view === 'explore') { renderExplore(view, ctx, r.params); document.title = 'Compare jobs · Career Bridge'; }
-  else if (r.view === 'board') { renderBoard(view, ctx, r.params); document.title = 'For workforce boards · Career Bridge'; }
-  else if (r.view === 'overview') { renderOverview(view, ctx); document.title = 'Career Bridge · A public skills signal for Massachusetts'; }
-  else if (r.view === 'market') { renderMarket(view, ctx, r.params); document.title = 'Skills market · Career Bridge'; }
-  else if (r.view === 'signals') { renderSignals(view, ctx, r.params); document.title = 'Skill signals · Career Bridge'; }
-  else if (r.view === 'post') { renderPost(view, ctx, r.params); document.title = 'Post a signal · Career Bridge'; key = 'post:' + (r.params.soc || ''); }
-  else if (r.view === 'me') { renderMe(view, ctx); document.title = 'Your profile · Career Bridge'; }
+  } else if (r.view === 'board') { renderBoard(view, ctx, r.params); document.title = 'For workforce boards · Career Bridge'; }
+  else if (r.view === 'overview') { renderOverview(view, ctx); document.title = 'Career Bridge · AI at work in Massachusetts'; }
+  else if (r.view === 'survey') { renderSurvey(view, ctx, r.params); document.title = 'AI at work survey · Career Bridge'; key = 'survey:' + (r.params.job || '') + (r.params.as || ''); }
+  else if (r.view === 'results') { renderResults(view, ctx, r.params); document.title = 'Survey results · Career Bridge'; }
   else { renderAbout(view, ctx); document.title = 'About the numbers · Career Bridge'; }
   if (key !== lastKey) {   // new page: move focus to its heading so screen-reader users hear where they are
     lastKey = key;
@@ -92,19 +69,8 @@ function route() {
 }
 
 function drawNav(r) {
-  const items = [['overview', 'Overview', '#/'], ['market', 'Skills market', hashFor('market')], ['signals', 'Skill signals', hashFor('signals')], ['job', 'Your job', ctx.hrefJob(lastSoc)], ['explore', 'Compare jobs', hashFor('explore')], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About the numbers', hashFor('about')]];
+  const items = [['overview', 'Overview', '#/'], ['survey', 'Survey', hashFor('survey')], ['results', 'Results', hashFor('results')], ['job', 'Look up a job', ctx.hrefJob(lastSoc)], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About', hashFor('about')]];
   $('nav').replaceChildren(...items.map(([k, label, href]) => h('a', {href, 'aria-current': k === r.view ? 'page' : null}, label)));
-}
-
-/* ---------- who you are (demo) ---------- */
-function drawRole() {
-  const r = role();
-  $('role').replaceChildren(h('span', {class: 'rolelabel', id: 'rolelabel'}, 'You are'),
-    h('div', {class: 'segs', role: 'group', 'aria-labelledby': 'rolelabel'}, Object.entries(ROLES).map(([k, v]) => h('button', {type: 'button', class: 'seg sm', 'aria-pressed': String(r === k), onclick: () => {
-      if (role() === k) return;
-      setRole(k); drawRole(); route(); announce(`Now viewing as ${v.label}.`);
-    }}, v.label))),
-    h('a', {href: '#/me', class: 'melink'}, 'Your profile'));
 }
 
 /* ---------- place ---------- */
@@ -156,7 +122,7 @@ function drawExamples() {
   model = makeModel(data, state.geo);
   if (model.full) $('lcnote').textContent = 'Data Source: Lightcast, 2026 · ';
   if (data.cb?.meta?.synthetic) { $('notice').hidden = false; $('notice').textContent = 'Test data: the Lightcast numbers shown are made up for testing.'; }
-  drawGeo(); drawExamples(); drawRole();
+  drawGeo(); drawExamples();
   window.addEventListener('hashchange', route);
   route();
 })();

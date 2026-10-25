@@ -123,43 +123,47 @@ export function apng(frames) {
 async function scenes(p, base) {
   const save = (name, r) => { const b = apng(r.frames); writeFileSync(join(OUT, name), b); console.log(`${name}: ${r.frames.length} frames, ${(b.length / 1e6).toFixed(1)} MB`); };
 
-  // 1. The case for leaders, then the skills market.
+  // 1. The overview for workforce leaders, then the sample results.
   let r = recorder(p);
   await p.ev('localStorage.clear()');
   await r.goto(base + '#/');
   await r.shot(1800);
-  await r.scrollTo('.band', 8); await r.shot(1600);
+  await r.scrollTo('.band', 8); await r.shot(2000);
   await r.scrollTo('.steps', 7); await r.shot(1800);
-  await r.click('(Array.from(document.querySelectorAll("#nav a")).find(a=>a.textContent==="Skills market"))', 900, 1400);
-  await r.scrollTo('.act', 6); await r.shot(1600);
-  await r.scrollTo('.mkt', 7); await r.shot(2200);
-  save('tour-market.png', r);
+  await r.click('(Array.from(document.querySelectorAll("#nav a")).find(a=>a.textContent==="Results"))', 900, 1600);
+  await r.scrollTo('.act', 6); await r.shot(1400);
+  await r.scrollTo('.saxis', 7); await r.shot(2200);
+  save('tour-results.png', r);
 
-  // 2. Two sides: post a signal as a worker, then verify it as an employer.
+  // 2. A worker answers the survey, then sees their answers counted in the totals.
   r = recorder(p);
   await p.ev('localStorage.clear()');
-  await r.goto(base + '#/post?soc=43-6014', 1600);
+  await r.goto(base + '#/survey', 1400);
   await r.shot(1200);
-  await r.click('(document.querySelectorAll(".skillopt > label input")[2])', 150, 300);
-  await r.click('(document.querySelectorAll(".skillopt > label input")[4])', 150, 300);
-  await r.click('(document.querySelectorAll(".aiopt input")[1])', 150, 300);
-  await r.click('(document.querySelectorAll(".skillopt > label input")[6])', 150, 300);
-  await r.click('(document.querySelectorAll(".aiopt input")[2])', 150, 400);
-  await r.type('#pn', 'I run scheduling for a 12-person office. AI drafts our minutes; I check every one.');
-  await r.shot(600);
-  await r.click('.postform button[type=submit]', 900, 1600);
-  await r.click('(Array.from(document.querySelectorAll("#role .seg")).find(b=>b.textContent==="Employer"))', 600, 900);
-  await r.click('(Array.from(document.querySelectorAll(".sig")).find(c=>c.innerText.includes("Yours")).querySelector(".sigfoot .btn:not(.ghost)"))', 600, 1800);
-  await r.click('.melink', 900, 1800);
-  save('tour-signals.png', r);
+  await r.click('a[href="#/survey?job=43-6014&as=worker"]', 900, 900);
+  await r.click('select[name=region]', 100, 200);
+  await r.eval('document.querySelector("select[name=region]").value="Central"'); await r.shot(300);
+  const radio = (row, col) => `(document.querySelectorAll(".qtable tbody tr")[${row}].querySelectorAll("input")[${col}])`;
+  await r.click(radio(0, 1), 100, 250);
+  await r.click(radio(2, 2), 100, 250);
+  await r.click(radio(4, 3), 100, 250);
+  await r.click(radio(6, 3), 100, 250);
+  await r.click(radio(8, 2), 100, 400);
+  await r.click('input[name=tools][value=chat]', 100, 250);
+  await r.click('input[name=trained][value=self]', 100, 250);
+  await r.click('input[name=help][value=check]', 100, 250);
+  await r.click('input[name=years][value="1to5"]', 100, 400);
+  await r.click('form.survey button[type=submit]', 700, 1400);
+  await r.click('a[href="#/results?job=43-6014"]', 900, 2400);
+  save('tour-survey.png', r);
 
-  // 3. A job from both sides: the public data plus what people in the job report.
+  // 3. The job page for career counselors.
   r = recorder(p);
-  await p.ev('localStorage.clear();localStorage.setItem("cb-role","worker")');
+  await p.ev('localStorage.clear()');
   await r.goto(base + '#/job/43-6014', 1600);
   await r.shot(1800);
   const panelOf = (title) => `(Array.from(document.querySelectorAll(".panel h3")).find(h=>h.textContent===${JSON.stringify(title)}).closest("section"))`;
-  await r.scrollTo(panelOf('What people in this job report'), 8); await r.shot(2400);
+  await r.scrollTo(panelOf('How much AI is used on this work'), 7); await r.shot(1800);
   await r.scrollTo(panelOf('What you can do about it'), 8); await r.shot(2000);
   await r.scrollTo('.tl', 6); await r.shot(2000);
   save('tour-job.png', r);
