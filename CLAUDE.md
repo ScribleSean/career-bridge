@@ -8,6 +8,10 @@ Massachusetts career tool for the Human Edge Studio challenge (SG+I, Oct 2026). 
 - Lightcast leads. Exposure groups use Lightcast bands: index above 50 = high; MA ads at or above the 2025 state rate (6.18%) = employers asking; silent gap = under 1%.
 - Never say "at risk" or "automatable". Exposure is overlap, not job loss.
 
+## Skill signals
+- `web/js/signals.js` (data, samples, storage) and `web/js/views/signals.js` (feed, post, profile, job panel). Static demo: samples are generated and labeled Sample; user posts and confirms live in localStorage only.
+- Static site: `./build-site.sh` → `site/` (open data only; never copies Lightcast files).
+
 ## UI
 - No taglines, subtitles, footnotes or helper sentences. A panel is a title, source tags (`src()`), and content. If a screen needs explaining, fix the layout; explanations and caveats live on the About page.
 - Every figure shows its source tag; Lightcast tags first.

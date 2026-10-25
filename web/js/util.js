@@ -55,7 +55,7 @@ export function announce(msg) {
 }
 
 /** Source tags: every figure names where it comes from. Lightcast is the core dataset, so its tag is highlighted. */
-const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['BLS OEWS 2019–2025', ''], onet: ['O*NET 31.0', ''], aei: ['Anthropic Economic Index', '']};
+const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['BLS OEWS 2019–2025', ''], onet: ['O*NET 31.0', ''], aei: ['Anthropic Economic Index', ''], sig: ['Career Bridge signals · sample', 'sgn']};
 export const src = (...keys) => h('span', {class: 'srcs'}, h('span', {class: 'sr'}, 'Source: '), keys.map((k) => h('span', {class: ('src ' + SRC[k][1]).trim()}, SRC[k][0])));
 
 /** Marks a what-if model as experimental: shown on every 2031 projection. */

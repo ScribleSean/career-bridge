@@ -4,6 +4,7 @@
 import {h, fmt, announce, src, experimental} from '../util.js';
 import {lineChart, barList} from '../charts.js';
 import {trendJobs, pathJobs, jobs2031, presetOf} from '../scenario.js';
+import {jobSignals} from './signals.js';
 
 export const POSTURE = {
   'Stay the course': ['calm', 'Keep building', 'Claude isn’t used much on this kind of work today. Keep learning, and check back now and then.'],
@@ -15,7 +16,7 @@ export const postureLabel = (p) => (POSTURE[p] ? POSTURE[p][1] : '—');
 
 const GAP = 'High exposure, low adoption', HIHI = 'High exposure, high adoption', LOHI = 'Lower exposure, high adoption', LOLO = 'Lower exposure, low adoption';
 
-const SOURCES = {'Where this job stands with AI': ['lc'], 'How much people use Claude on this work': ['aei', 'onet'], 'What if: jobs in 2031': ['oewsh', 'aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
+const SOURCES = {'What people in this job report': ['sig'], 'Where this job stands with AI': ['lc'], 'How much people use Claude on this work': ['aei', 'onet'], 'What if: jobs in 2031': ['oewsh', 'aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
   'Job ads asking for AI skills': ['lc'], 'Is this job following software?': ['lc'], 'Job growth in Massachusetts': ['oewsh'],
   'What people use AI for in this job': ['aei', 'onet', 'lc'], 'Your human edge and what employers ask for': ['lc', 'onet']};
 // No subtitles or footnotes: a panel is its title, its source tags, and its content. Explanations live on the About page.
@@ -290,5 +291,5 @@ export function renderJob(root, ctx, o) {
   // and the 2031 "what if" last, so the page matches the team's deck.
   const lc = ctx.model.full && o.lc ? [lightcastStanding(ctx, o), ...lightcastPanels(ctx, o)] : [];
   root.replaceChildren(h('div', {class: 'jobview'},
-    header(ctx, o), ...lc, standing(ctx, o), planPanel(ctx, o), scenarioPanel(ctx, o)));
+    header(ctx, o), ...lc, standing(ctx, o), jobSignals(ctx, o, panel), planPanel(ctx, o), scenarioPanel(ctx, o)));
 }

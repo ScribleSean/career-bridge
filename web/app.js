@@ -1,6 +1,7 @@
 // Career Bridge shell: loads data, owns the shared state (place, scenario), routes, and runs the search box.
 //   #/job/<soc>   one job          #/explore?x=&y=&group=&posture=&sort=&dir=   all jobs
 //   #/board?...   workforce board (private build)          #/about
+//   #/signals?soc=&side=&region=&verified=   skill signals     #/post?soc=   post one     #/me   your profile
 // Scenario settings travel in the URL as a=<adoption %>&p=<headcount %> so a link reproduces what you see.
 import {$, h, store, announce, loading, errorBox, reduceMotion} from './js/util.js';
 import {loadData, makeModel} from './js/data.js';
@@ -9,6 +10,8 @@ import {renderJob} from './js/views/job.js';
 import {renderExplore} from './js/views/explore.js';
 import {renderBoard} from './js/views/board.js';
 import {renderAbout} from './js/views/about.js';
+import {renderSignals, renderPost, renderMe} from './js/views/signals.js';
+import {ROLES, role, setRole} from './js/signals.js';
 
 const DEFAULT_SOC = '43-6014';  // Denise, the administrative assistant from slide 2
 const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'],
@@ -30,7 +33,7 @@ function parseHash() {
   const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
   const parts = path.split('/').filter(Boolean);
   const params = Object.fromEntries(new URLSearchParams(query));
-  const view = ['explore', 'board', 'about'].includes(parts[0]) ? parts[0] : 'job';
+  const view = ['explore', 'board', 'about', 'signals', 'post', 'me'].includes(parts[0]) ? parts[0] : 'job';
   return {view, params, soc: view === 'job' ? decodeURIComponent(parts[1] || '') : ''};
 }
 function hashFor(view, params = {}, soc = '') {
@@ -56,6 +59,7 @@ function route() {
   if (r.view === 'board' && !model.full) { history.replaceState(null, '', hashFor('explore')); return route(); }
   readScenario(r.params);
   drawNav(r);
+  document.querySelector('.find').hidden = !['job', 'explore', 'board'].includes(r.view);  // job search only where it's used
   const view = $('view');
   const activeId = document.activeElement && view.contains(document.activeElement) ? document.activeElement.id : '';
   let key = r.view;
@@ -72,6 +76,9 @@ function route() {
     document.title = `${o.title} · Career Bridge`;
   } else if (r.view === 'explore') { renderExplore(view, ctx, r.params); document.title = 'Compare jobs · Career Bridge'; }
   else if (r.view === 'board') { renderBoard(view, ctx, r.params); document.title = 'For workforce boards · Career Bridge'; }
+  else if (r.view === 'signals') { renderSignals(view, ctx, r.params); document.title = 'Skill signals · Career Bridge'; }
+  else if (r.view === 'post') { renderPost(view, ctx, r.params); document.title = 'Post a signal · Career Bridge'; key = 'post:' + (r.params.soc || ''); }
+  else if (r.view === 'me') { renderMe(view, ctx); document.title = 'Your profile · Career Bridge'; }
   else { renderAbout(view, ctx); document.title = 'About the numbers · Career Bridge'; }
   if (key !== lastKey) {   // new page: move focus to its heading so screen-reader users hear where they are
     lastKey = key;
@@ -81,8 +88,19 @@ function route() {
 }
 
 function drawNav(r) {
-  const items = [['job', 'Your job', ctx.hrefJob(lastSoc)], ['explore', 'Compare jobs', hashFor('explore')], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About the numbers', hashFor('about')]];
+  const items = [['job', 'Your job', ctx.hrefJob(lastSoc)], ['signals', 'Skill signals', hashFor('signals')], ['explore', 'Compare jobs', hashFor('explore')], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About the numbers', hashFor('about')]];
   $('nav').replaceChildren(...items.map(([k, label, href]) => h('a', {href, 'aria-current': k === r.view ? 'page' : null}, label)));
+}
+
+/* ---------- who you are (demo) ---------- */
+function drawRole() {
+  const r = role();
+  $('role').replaceChildren(h('span', {class: 'rolelabel', id: 'rolelabel'}, 'You are'),
+    h('div', {class: 'segs', role: 'group', 'aria-labelledby': 'rolelabel'}, Object.entries(ROLES).map(([k, v]) => h('button', {type: 'button', class: 'seg sm', 'aria-pressed': String(r === k), onclick: () => {
+      if (role() === k) return;
+      setRole(k); drawRole(); route(); announce(`Now viewing as ${v.label}.`);
+    }}, v.label))),
+    h('a', {href: '#/me', class: 'melink'}, 'Your profile'));
 }
 
 /* ---------- place ---------- */
@@ -134,7 +152,7 @@ function drawExamples() {
   model = makeModel(data, state.geo);
   if (model.full) $('lcnote').textContent = 'Data Source: Lightcast, 2026 · ';
   if (data.cb?.meta?.synthetic) { $('notice').hidden = false; $('notice').textContent = 'Test data: the Lightcast numbers shown are made up for testing.'; }
-  drawGeo(); drawExamples();
+  drawGeo(); drawExamples(); drawRole();
   window.addEventListener('hashchange', route);
   route();
 })();
