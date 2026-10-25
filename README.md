@@ -2,7 +2,7 @@
 
 Career Bridge is a career tool for Massachusetts workers and workforce boards. Look up a job to see how much of its work people already hand to AI, how the job has been growing, and a concrete plan for what to do next.
 
-Built by team **The Communicators** for the Human Edge Studio by SG+I hackathon, *Work, Identity, and Opportunity in the Age of AI*, at WPI on October 24, 2026.
+🥉 **3rd place, Human Edge Studio by SG+I, October 2026.** Built by team **The Communicators** for the hackathon *Work, Identity, and Opportunity in the Age of AI*, at WPI on October 24, 2026.
 
 ![A job page: the job's Massachusetts workers, pay, growth, training, and how much people use Claude on this work](docs/img/job-overview.png)
 
