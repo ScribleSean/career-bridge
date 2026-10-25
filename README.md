@@ -2,6 +2,8 @@
 
 Career Bridge is where Massachusetts workers and employers say what jobs really involve. Workers post the skills their job actually uses and where AI helps. Employers post what a role needs and which skills are becoming more important. Coworkers, employers and MassHire career centers confirm what's true. Alongside it, every job comes with the public data: pay, growth, how much people use AI on the work, and a plan for what to do next.
 
+**[Try it live →](https://scriblesean.github.io/career-bridge/)**
+
 🥉 **3rd place, Human Edge Studio by SG+I, October 2026.** Built by team **The Communicators** for the hackathon *Work, Identity, and Opportunity in the Age of AI*, at WPI on October 24, 2026.
 
 ## Why
@@ -47,6 +49,6 @@ Look up any job for the public data behind it:
 
 The signals marked *Sample* are made up to show how it works. What you post or confirm is saved in your browser only and never sent anywhere. AI overlap shows where work overlaps with what AI can do; it doesn't predict job loss, and it can mean AI helps.
 
-Run it: `./build-site.sh`, then `python3 -m http.server 8090 --directory site` and open http://localhost:8090.
+Live at https://scriblesean.github.io/career-bridge/. To run it locally: `./build-site.sh`, then `python3 -m http.server 8090 --directory site` and open http://localhost:8090.
 
 Data: BLS OEWS (May 2019 to May 2025), O*NET 31.0, Anthropic Economic Index (June 2026 release). At the event we also used Lightcast job-ad data (Data Source: Lightcast, 2026), which is licensed and not part of this repo.
