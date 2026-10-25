@@ -1,5 +1,5 @@
 // Skill signals: the two-sided part of Career Bridge. Workers and employers post which skills a job uses
-// and where AI helps; coworkers, employers and MassHire confirm. Feed, post form, profile, and the job-page panel.
+// and where AI helps; coworkers, employers and career centers confirm. Feed, post form, profile, and the job-page panel.
 import {h, fmt, announce, src} from '../util.js';
 import {SKILLS, SKILL, REGIONS, ROLES, DEMO_JOBS, STATUS, COMMUNITY_MIN, role, status, allSignals, post, removePost,
   confirm, unconfirm, confirmKind, confirmedByMe, summarize, myActivity, badges, resetDemo, onetIds} from '../signals.js';
@@ -32,7 +32,7 @@ function confirmLine(sig) {
 /** One signal card. onChange re-renders the view after a confirm. */
 export function card(ctx, sig, onChange, {showJob = true} = {}) {
   const kind = confirmKind(sig), mine = confirmedByMe(sig);
-  const verb = {coworker: 'I do this job too: confirm', employer: 'Verify as employer', masshire: 'Verify as MassHire'}[kind];
+  const verb = {coworker: 'I do this job too: confirm', employer: 'Verify as employer', masshire: 'Verify as career center'}[kind];
   const btn = kind ? h('button', {type: 'button', class: 'btn sm' + (mine ? ' on' : ''), 'aria-pressed': String(mine), onclick: () => {
     if (mine) { unconfirm(sig); announce('Confirmation removed.'); } else { confirm(sig); announce('Confirmed. Thanks for vouching.'); }
     onChange();
@@ -87,7 +87,7 @@ export function renderSignals(root, ctx, params) {
 }
 
 const masshireNote = () => h('aside', {class: 'mhnote'},
-  h('b', {}, 'MassHire career centers'), ' can verify signals after talking with the person, and help with training for the skills employers say are growing. ',
+  h('b', {}, 'Proposed: '), 'MassHire career centers could verify signals after talking with the person, and point training at the skills employers say are growing. ',
   h('a', {href: MASSHIRE_URL, target: '_blank', rel: 'noopener'}, 'Find a MassHire career center'));
 
 /* ------------------------------------------------------------------ post */
@@ -96,7 +96,7 @@ export function renderPost(root, ctx, params) {
   const r = role();
   if (r === 'masshire') {
     root.replaceChildren(h('div', {class: 'sigview'}, h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'Post a signal')),
-      h('p', {class: 'panel'}, 'MassHire career centers verify signals instead of posting them. Switch to Worker or Employer at the top to post.')));
+      h('p', {class: 'panel'}, 'Career centers verify signals instead of posting them. Switch to Worker or Employer at the top to post.')));
     return;
   }
   const side = r === 'worker' ? 'worker' : 'employer';

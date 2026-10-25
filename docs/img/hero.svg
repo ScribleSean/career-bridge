@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" role="img" aria-labelledby="t d">
+  <title id="t">Career Bridge: a public skills signal for Massachusetts</title>
+  <desc id="d">Workers and employers send skill signals. Coworkers, employers and career centers verify them. The skills market compares employer demand with verified worker supply and flags shortages.</desc>
+  <style>
+    text { font-family: 'Noto Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #141414; }
+    .muted { fill: #535353; }
+    .w { fill: #fff; }
+    .card { fill: #fff; stroke: #CCD5DF; stroke-width: 1.5; }
+    .chip rect { rx: 0; }
+    .chip text { font-size: 15px; font-weight: 600; }
+    .loop { animation-duration: 9s; animation-iteration-count: infinite; animation-timing-function: cubic-bezier(.45,0,.25,1); }
+    /* signal chips travel from a worker or employer to the verification node */
+    .c1 { animation-name: c1; } .c2 { animation-name: c2; } .c3 { animation-name: c3; } .c4 { animation-name: c4; }
+    @keyframes c1 { 0%,4% { transform: translate(250px,178px); opacity: 0 } 8% { opacity: 1; transform: translate(250px,178px) } 22% { transform: translate(530px,212px); opacity: 1 } 26%,100% { transform: translate(530px,212px); opacity: 0 } }
+    @keyframes c2 { 0%,10% { transform: translate(770px,188px); opacity: 0 } 14% { opacity: 1; transform: translate(770px,188px) } 28% { transform: translate(530px,212px); opacity: 1 } 32%,100% { transform: translate(530px,212px); opacity: 0 } }
+    @keyframes c3 { 0%,16% { transform: translate(250px,258px); opacity: 0 } 20% { opacity: 1; transform: translate(250px,258px) } 34% { transform: translate(530px,212px); opacity: 1 } 38%,100% { transform: translate(530px,212px); opacity: 0 } }
+    @keyframes c4 { 0%,22% { transform: translate(770px,268px); opacity: 0 } 26% { opacity: 1; transform: translate(770px,268px) } 40% { transform: translate(530px,212px); opacity: 1 } 44%,100% { transform: translate(530px,212px); opacity: 0 } }
+    /* verification node pulses as signals arrive */
+    .pulse { animation-name: pulse; transform-origin: 600px 228px; }
+    @keyframes pulse { 0%,21% { transform: scale(1) } 24% { transform: scale(1.12) } 27% { transform: scale(1) } 30% { transform: scale(1.12) } 33% { transform: scale(1) } 36% { transform: scale(1.12) } 39% { transform: scale(1) } 42% { transform: scale(1.12) } 45%,100% { transform: scale(1) } }
+    .ring { animation-name: ring; transform-origin: 600px 228px; }
+    @keyframes ring { 0%,22% { transform: scale(1); opacity: 0 } 24% { opacity: .5 } 46% { transform: scale(1.9); opacity: 0 } 100% { opacity: 0 } }
+    .flow { stroke-dasharray: 6 8; animation: flow 1.2s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -28 } }
+    /* market bars grow after verification, then the shortage flags appear */
+    .bar { transform-box: fill-box; transform-origin: left center; animation-name: grow; }
+    .b2 { animation-name: grow2; } .b3 { animation-name: grow3; }
+    @keyframes grow { 0%,46% { transform: scaleX(0) } 60%,92% { transform: scaleX(1) } 98%,100% { transform: scaleX(0) } }
+    @keyframes grow2 { 0%,50% { transform: scaleX(0) } 64%,92% { transform: scaleX(1) } 98%,100% { transform: scaleX(0) } }
+    @keyframes grow3 { 0%,54% { transform: scaleX(0) } 68%,92% { transform: scaleX(1) } 98%,100% { transform: scaleX(0) } }
+    .tag { animation-name: tag; } .tag2 { animation-name: tag2; }
+    @keyframes tag { 0%,66% { opacity: 0 } 70%,92% { opacity: 1 } 97%,100% { opacity: 0 } }
+    @keyframes tag2 { 0%,72% { opacity: 0 } 76%,92% { opacity: 1 } 97%,100% { opacity: 0 } }
+    @media (prefers-reduced-motion: reduce) { .loop, .flow { animation: none !important; } .bar { transform: none; } .tag, .tag2 { opacity: 1; } .chip { opacity: 0; } }
+  </style>
+
+  <rect width="1200" height="560" fill="#fff"/>
+  <rect width="1200" height="6" fill="#14558F"/>
+  <!-- title -->
+  <g transform="translate(48 30)">
+    <rect width="40" height="40" fill="#14558F"/>
+    <path d="M6 27h28M9 27c3-9 19-9 22 0M12 27v-5M20 27v-8M28 27v-5" stroke="#fff" stroke-width="2.6" fill="none"/>
+    <text x="54" y="29" font-size="30" font-weight="700">Career Bridge</text>
+  </g>
+  <text x="48" y="104" font-size="19" class="muted">Workers and employers say what jobs really use. People who know the work confirm it.</text>
+
+  <!-- workers -->
+  <g transform="translate(48 140)">
+    <text x="0" y="0" font-size="14" font-weight="700" fill="#14558F" letter-spacing="1.5">WORKERS</text>
+    <g transform="translate(0 18)"><rect class="card" width="210" height="60"/><circle cx="30" cy="30" r="15" fill="#DCE8F4"/><rect x="56" y="18" width="110" height="9" fill="#141414"/><rect x="56" y="35" width="80" height="8" fill="#CCD5DF"/></g>
+    <g transform="translate(0 98)"><rect class="card" width="210" height="60"/><circle cx="30" cy="30" r="15" fill="#DCE8F4"/><rect x="56" y="18" width="96" height="9" fill="#141414"/><rect x="56" y="35" width="120" height="8" fill="#CCD5DF"/></g>
+    <g transform="translate(0 178)"><rect class="card" width="210" height="60"/><circle cx="30" cy="30" r="15" fill="#DCE8F4"/><rect x="56" y="18" width="120" height="9" fill="#141414"/><rect x="56" y="35" width="70" height="8" fill="#CCD5DF"/></g>
+  </g>
+  <!-- employers -->
+  <g transform="translate(942 140)">
+    <text x="210" y="0" font-size="14" font-weight="700" fill="#A9441A" letter-spacing="1.5" text-anchor="end">EMPLOYERS</text>
+    <g transform="translate(0 18)"><rect class="card" width="210" height="60"/><rect x="16" y="15" width="28" height="30" fill="#FDEBDD"/><rect x="56" y="18" width="104" height="9" fill="#141414"/><rect x="56" y="35" width="90" height="8" fill="#CCD5DF"/></g>
+    <g transform="translate(0 98)"><rect class="card" width="210" height="60"/><rect x="16" y="15" width="28" height="30" fill="#FDEBDD"/><rect x="56" y="18" width="120" height="9" fill="#141414"/><rect x="56" y="35" width="64" height="8" fill="#CCD5DF"/></g>
+  </g>
+
+  <!-- flow lines -->
+  <path class="flow" d="M262 200 C 400 200, 470 228, 548 228" stroke="#14558F" stroke-width="2" fill="none" opacity=".35"/>
+  <path class="flow" d="M262 360 C 400 360, 470 240, 548 236" stroke="#14558F" stroke-width="2" fill="none" opacity=".35"/>
+  <path class="flow" d="M938 200 C 800 200, 730 228, 652 228" stroke="#A9441A" stroke-width="2" fill="none" opacity=".35"/>
+  <path class="flow" d="M938 280 C 800 280, 730 236, 652 236" stroke="#A9441A" stroke-width="2" fill="none" opacity=".35"/>
+  <path d="M600 280 V 318" stroke="#14558F" stroke-width="2" class="flow" opacity=".45"/>
+
+  <!-- verification node -->
+  <circle class="loop ring" cx="600" cy="228" r="46" fill="none" stroke="#1F6E43" stroke-width="3"/>
+  <g class="loop pulse">
+    <circle cx="600" cy="228" r="46" fill="#1F6E43"/>
+    <path d="M581 229 l13 13 l25 -27" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="square"/>
+  </g>
+  <text x="600" y="150" font-size="15" font-weight="700" text-anchor="middle" fill="#1F6E43" letter-spacing="1.5">VERIFIED</text>
+  <text x="600" y="170" font-size="14" text-anchor="middle" class="muted">coworkers · employers · career centers</text>
+
+  <!-- traveling signal chips -->
+  <g class="chip loop c1" opacity="0"><rect width="140" height="32" fill="#DCE8F4"/><text x="12" y="21">Scheduling</text></g>
+  <g class="chip loop c2" opacity="0"><rect width="180" height="32" fill="#FDEBDD"/><text x="12" y="21">Checking AI output</text></g>
+  <g class="chip loop c3" opacity="0"><rect width="206" height="32" fill="#DCE8F4"/><text x="12" y="21">Using AI assistants</text><rect x="176" y="9" width="22" height="14" fill="#2C7A4E"/><text x="179" y="20" font-size="10" class="w">AI</text></g>
+  <g class="chip loop c4" opacity="0"><rect width="180" height="32" fill="#FDEBDD"/><text x="12" y="21">Using AI assistants</text></g>
+
+  <!-- skills market -->
+  <g transform="translate(330 322)">
+    <rect width="540" height="210" fill="#F2F2F2"/>
+    <rect width="540" height="4" fill="#F6C51B"/>
+    <text x="24" y="38" font-size="18" font-weight="700">Skills market</text>
+    <g transform="translate(330 26)">
+      <rect width="12" height="12" fill="#14558F"/><text x="18" y="11" font-size="13" class="muted">Employer demand</text>
+      <rect y="18" width="12" height="12" fill="#1F6E43"/><text x="18" y="29" font-size="13" class="muted">Verified supply</text>
+    </g>
+    <!-- rows -->
+    <g transform="translate(24 76)">
+      <text y="0" font-size="15" font-weight="600">Using AI assistants</text>
+      <rect class="loop bar" x="190" y="-14" width="260" height="10" fill="#14558F"/>
+      <rect class="loop bar" x="190" y="-1" width="80" height="10" fill="#1F6E43"/>
+      <g class="loop tag" opacity="0"><rect x="400" y="6" width="92" height="20" fill="#FBE3D6"/><text x="408" y="21" font-size="12" font-weight="700" fill="#8A2E0E" letter-spacing="1">SHORTAGE</text></g>
+    </g>
+    <g transform="translate(24 128)">
+      <text y="0" font-size="15" font-weight="600">Checking AI output</text>
+      <rect class="loop bar b2" x="190" y="-14" width="150" height="10" fill="#14558F"/>
+      <rect class="loop bar b2" x="190" y="-1" width="50" height="10" fill="#1F6E43"/>
+      <g class="loop tag2" opacity="0"><rect x="400" y="6" width="92" height="20" fill="#FBE3D6"/><text x="408" y="21" font-size="12" font-weight="700" fill="#8A2E0E" letter-spacing="1">SHORTAGE</text></g>
+    </g>
+    <g transform="translate(24 180)">
+      <text y="0" font-size="15" font-weight="600">Scheduling</text>
+      <rect class="loop bar b3" x="190" y="-14" width="40" height="10" fill="#14558F"/>
+      <rect class="loop bar b3" x="190" y="-1" width="140" height="10" fill="#1F6E43"/>
+    </g>
+  </g>
+  <text x="48" y="548" font-size="12" class="muted">Independent student project. Not affiliated with MassHire or the Commonwealth of Massachusetts. Sample data.</text>
+</svg>

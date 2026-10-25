@@ -1,5 +1,5 @@
 // Skill signals: workers and employers say which skills a job actually uses, and where AI helps.
-// The community confirms them: coworkers vouch, employers and MassHire career centers verify.
+// The community confirms them: coworkers vouch, employers and career centers verify.
 // Static demo: sample signals are generated here (and labeled as samples); what you post or confirm
 // is kept in this browser only (localStorage). Nothing is sent anywhere.
 import {store} from './util.js';
@@ -48,7 +48,7 @@ export const REGIONS = ['Boston', 'Metro North', 'Metro West', 'Northeast', 'Sou
 export const ROLES = {
   worker: {label: 'Worker', you: 'You (worker)', can: 'Post what your job uses. Vouch for coworkers.'},
   employer: {label: 'Employer', you: 'You (employer)', can: 'Post what you need in a role. Verify workers.'},
-  masshire: {label: 'MassHire', you: 'You (MassHire career center)', can: 'Verify any signal after talking with the person.'},
+  masshire: {label: 'Career center', you: 'You (career center counselor)', can: 'Verify any signal after talking with the person. In a real pilot this would be a MassHire career center.'},
 };
 export const role = () => (ROLES[store.get('cb-role')] ? store.get('cb-role') : 'worker');
 export const setRole = (r) => store.set('cb-role', r);
@@ -63,7 +63,7 @@ export function status(sig) {
   return 'posted';
 }
 export const STATUS = {
-  masshire: ['Verified by MassHire', 'v-masshire'],
+  masshire: ['Career center verified', 'v-masshire'],
   employer: ['Employer verified', 'v-employer'],
   community: ['Community confirmed', 'v-community'],
   posted: ['Posted', 'v-posted'],
@@ -124,14 +124,15 @@ function samplesFor(soc, plan) {
     const aiOn = usesAI ? picked.filter((k) => use.includes(k)).slice(0, 2) : [];
     if (usesAI && r() < 0.5) { picked.push('ai-assist'); aiOn.push('ai-assist'); }
     if (side === 'worker' && usesAI && r() < 0.2) picked.push('ai-check');
-    const growing = side === 'employer' ? [...new Set(['ai-assist', r() < 0.5 ? 'ai-check' : 'automation', ...lean.slice(0, 1)])] : [];
+    if (side === 'worker' && usesAI && r() < 0.15) picked.push('automation');
+    const growing = side === 'employer' ? shuffle(r, [...lean, ...use, 'ai-assist', 'ai-check', 'automation']).slice(0, 2) : [];
     const notes = NOTES[soc]?.[side];
     const note = notes ? notes[i % notes.length] : TEMPLATE[side](picked, side === 'worker' ? aiOn : growing);
     const id = `s-${soc}-${i}`;
     const nConf = Math.floor(r() * 5);
     const confirms = Array.from({length: nConf}, (_, j) => ({by: `sample-${soc}-${i}-${j}`, name: pick(r, FIRST), kind: 'coworker', at: daysAgo(Math.floor(r() * 20))}));
     if (side === 'worker' && r() < 0.35) confirms.push({by: `sample-emp-${soc}-${i}`, name: pick(r, EMPLOYERS), kind: 'employer', at: daysAgo(Math.floor(r() * 10))});
-    if (side === 'worker' && r() < 0.15) confirms.push({by: 'sample-masshire', name: 'MassHire Central Career Center', kind: 'masshire', at: daysAgo(Math.floor(r() * 10))});
+    if (side === 'worker' && r() < 0.15) confirms.push({by: 'sample-masshire', name: 'a career center (sample)', kind: 'masshire', at: daysAgo(Math.floor(r() * 10))});
     out.push({
       id, soc, side, sample: true,
       author: side === 'worker' ? {id: `sample-w-${soc}-${i}`, name: `${pick(r, FIRST)} ${String.fromCharCode(65 + Math.floor(r() * 26))}.`, years: 1 + Math.floor(r() * 15)}

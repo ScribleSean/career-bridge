@@ -55,7 +55,7 @@ export function renderMarket(root, ctx, params) {
       h('ol', {class: 'actlist'}, short.slice(0, 3).map((r) => h('li', {},
         h('b', {}, SKILL[r.id].label), h('span', {class: 'idx'}, gapText(r)),
         h('span', {class: 'jobs'}, 'Named by employers of: ', jobsNaming(r.id).join(', ') || '—')))),
-      h('p', {}, h('a', {href: MASSHIRE_URL, target: '_blank', rel: 'noopener'}, 'MassHire career centers'), ' can point training funds and workers at these skills.')) : null,
+      h('p', {}, h('a', {href: MASSHIRE_URL, target: '_blank', rel: 'noopener'}, 'MassHire career centers'), ' could point training funds and workers at these skills. Sample data: these results illustrate the method, not real demand.')) : null,
     h('section', {class: 'panel'}, h('h3', {}, 'Employer demand vs verified worker supply'),
       h('div', {class: 'legend'}, h('span', {class: 'key', style: '--c:var(--brand)'}, 'Share of employer demand'), h('span', {class: 'key', style: '--c:var(--ok)'}, 'Share of verified worker supply')),
       h('div', {class: 'mktaxis', 'aria-hidden': 'true'}, ticks.map((t) => h('span', {style: `left:${pos(t)}`}, pct(t)))),
