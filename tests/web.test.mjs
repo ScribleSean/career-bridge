@@ -3,7 +3,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {search, useTitles} from '../web/js/search.js';
-import {JOBS, totals, MIN_CELL, actsFor} from '../web/js/survey.js';
+import {JOBS, totals, MIN_CELL, actsFor, submit, myCount} from '../web/js/survey.js';
+
+// Avoid Node’s experimental native localStorage; tests install isolated browser storage.
+Object.defineProperty(globalThis, 'localStorage', {value: undefined, writable: true, configurable: true});
 
 test('search finds jobs by official and alternate titles', () => {
   const occs = [
@@ -18,6 +21,7 @@ test('search finds jobs by official and alternate titles', () => {
   assert.equal(search('43-4051', occs)[0].o.soc, '43-4051');
   assert.deepEqual(search('', occs), []);
   assert.deepEqual(search('zzzz', occs), []);
+  assert.deepEqual(search('*', occs), []);
 });
 
 const PLANS = {'43-6014': {lean: ['Scheduling Work and Activities'], use: ['Documenting/Recording Information', 'Working with Computers']}};
@@ -46,10 +50,10 @@ test('a group with fewer than 10 responses is hidden', () => {
 });
 
 import {makeModel} from '../web/js/data.js';
-import {parseHash} from '../web/js/util.js';
+import {parseHash, store} from '../web/js/util.js';
 import {renderJob} from '../web/js/views/job.js';
 import {renderOverview} from '../web/js/views/overview.js';
-import {renderSurvey} from '../web/js/views/survey.js';
+import {renderSurvey, renderResults} from '../web/js/views/survey.js';
 import {renderBoard, QUADS} from '../web/js/views/board.js';
 
 // Only the DOM operations used by the renderers. No browser or data files needed.
@@ -61,7 +65,9 @@ class Element {
   append(...kids) { this.children.push(...kids); }
   replaceChildren(...kids) { this.children = kids; }
   setAttribute(k, v) { this.attrs[k] = String(v); }
-  addEventListener() {}
+  events = {};
+  addEventListener(name, handler) { this.events[name] = handler; }
+  focus() {}
   get textContent() { return this.children.map((c) => typeof c === 'object' ? c.textContent : c).join(''); }
   set textContent(v) { this.children = [v]; }
 }
@@ -176,4 +182,91 @@ test('hashchange preserves the current view for #main and renders overview for b
   assert.equal(root.textContent, 'Overview');
   assert.equal(rendered, 1);
   assert.equal(sandbox.lastKey, 'overview');
+});
+
+
+test('search folds accents in queries, official titles and alternate titles', () => {
+  const occs = [{soc: '1', title: 'Résumé Writer'}, {soc: '2', title: 'Cafeteria Worker'}, {soc: '3', title: 'Café Manager'}];
+  useTitles([['Résumé Specialist', '1']]);
+  for (const q of ['résumé writer', 'resume writer', 're\u0301sume\u0301 writer']) assert.equal(search(q, occs)[0].o.soc, '1');
+  assert.equal(search('resume specialist', occs)[0].via, 'Résumé Specialist');
+  for (const q of ['café', 'cafe', 'cafe\u0301']) assert.ok(search(q, occs).some((x) => x.o.soc === '3'));
+  assert.deepEqual(search('writ', occs).map((x) => x.o.soc), ['1']);  // partial words still match while typing
+  assert.doesNotThrow(() => search('*', [{soc: '9', title: '*'}]));
+});
+
+function storage(t, fail = false) {
+  const old = globalThis.localStorage;
+  const data = new Map();
+  globalThis.localStorage = {getItem: (k) => data.get(k) ?? null, setItem(k, v) {
+    if (fail) throw new Error('quota');
+    data.set(k, v);
+  }};
+  t.after(() => { globalThis.localStorage = old; });
+  return data;
+}
+const worker = (region = 'Boston') => ({side: 'worker', soc: JOBS[0].soc, region,
+  acts: {'ai-assist': 'often', 'ai-check': 'some'}, tools: ['chat'], help: ['tools'], trained: 'yes'});
+const employer = () => ({side: 'employer', soc: JOBS[0].soc, region: 'Boston', need: {'ai-assist': true}, growing: ['ai-assist']});
+
+test('sample and submitted totals apply the cutoff separately, including region filters', (t) => {
+  storage(t);
+  const sample = totals(JOBS[0].soc, PLANS);
+  for (let i = 0; i < 9; i++) { assert.equal(submit(worker()), true); submit(employer()); }
+  let own = totals(JOBS[0].soc, PLANS, '', 'mine');
+  assert.equal(own.nW, 9); assert.equal(own.nE, 9);
+  assert.equal(own.useAnyAI, null); assert.equal(own.adsMentionAI, null);
+  assert.ok(own.acts.every((a) => a.doPct === null && a.needPct === null));
+  assert.deepEqual(totals(JOBS[0].soc, PLANS), sample);
+  submit(worker()); submit(employer());
+  own = totals(JOBS[0].soc, PLANS, '', 'mine');
+  assert.equal(own.okW, true); assert.equal(own.okE, true); assert.equal(own.useAnyAI, 1);
+  submit(worker('Berkshire'));
+  own = totals(JOBS[0].soc, PLANS, 'Berkshire', 'mine');
+  assert.equal(own.nW, 1); assert.equal(own.useAnyAI, null);
+  const ctx = context();
+  let route;
+  ctx.go = (view, params) => { route = {view, params}; };
+  const root = render(renderResults, ctx, {source: 'mine'});
+  assert.ok(root.textContent.includes('Your answers · this browser'));
+  assert.ok(!root.textContent.includes('Sample results.'));
+  const sampleRoot = render(renderResults, ctx, {});
+  assert.ok(sampleRoot.textContent.includes('Sample results.'));
+  nodes(sampleRoot, (n) => n.tag === 'button' && n.textContent === 'Your answers')[0].events.click();
+  assert.deepEqual(route, {view: 'results', params: {source: 'mine'}});
+});
+
+test('malformed saved answers are ignored by counts and results', (t) => {
+  const data = storage(t);
+  for (const value of ['bad json', '{}', 'null', JSON.stringify([null, {}, {...worker(), acts: null},
+    {...employer(), need: null}, {...employer(), growing: null}, worker(), employer()])]) {
+    data.set('cb-survey-v1', value);
+    assert.doesNotThrow(() => totals(JOBS[0].soc, PLANS, '', 'mine'));
+    assert.doesNotThrow(() => render(renderResults, context(), {source: 'mine'}));
+  }
+  assert.equal(myCount(), 2);
+});
+
+test('failed storage keeps the form visible and success alone shows thank-you', (t) => {
+  const oldFormData = globalThis.FormData;
+  const oldGet = document.getElementById;
+  t.after(() => { globalThis.FormData = oldFormData; document.getElementById = oldGet; });
+  globalThis.FormData = class {
+    get(k) { return k === 'region' ? 'Boston' : k.startsWith('a-') ? 'often' : 'yes'; }
+    getAll() { return []; }
+  };
+  document.getElementById = (id) => id === 'view-title' ? new Element('h2') : null;
+  storage(t);
+  const setItem = globalThis.localStorage.setItem;
+  for (const fail of [true, false]) {
+    globalThis.localStorage.setItem = fail ? () => { throw new Error('quota'); } : setItem;
+    assert.equal(store.set('probe', 'value'), !fail);
+    assert.equal(submit(worker()), !fail);
+    const root = render(renderSurvey, context(), {job: JOBS[0].soc, as: 'worker'});
+    assert.ok(root.textContent.includes('Stored as-is in this browser until you choose “Clear my answers”.'));
+    const form = nodes(root, (n) => n.tag === 'form')[0];
+    form.events.submit({preventDefault() {}, currentTarget: form});
+    assert.equal(root.textContent.includes('Thank you'), !fail);
+    assert.equal(root.textContent.includes('Could not save your answers. Try again.'), fail);
+  }
 });

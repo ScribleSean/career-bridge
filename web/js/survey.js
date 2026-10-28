@@ -103,22 +103,31 @@ function samples(soc, plans) {
 
 /* ---------- storage ---------- */
 const KEY = 'cb-survey-v1';
-const mine = () => { try { return JSON.parse(store.get(KEY) || '[]'); } catch (e) { return []; } };
-export function submit(resp) { const v = mine(); v.push({...resp, mine: true, at: new Date().toISOString().slice(0, 10)}); store.set(KEY, JSON.stringify(v)); }
+const record = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const valid = (v) => record(v) && JOBS.some((j) => j.soc === v.soc) && REGIONS.includes(v.region) &&
+  (v.side === 'worker' ? record(v.acts) && Object.values(v.acts).every((x) => AI_LEVELS.some(([id]) => id === x)) &&
+    Array.isArray(v.tools) && Array.isArray(v.help) :
+    v.side === 'employer' && record(v.need) && Object.values(v.need).every((x) => x === true) &&
+    Array.isArray(v.growing) && v.growing.every((x) => typeof x === 'string'));
+const mine = () => {
+  try { const v = JSON.parse(store.get(KEY) || '[]'); return Array.isArray(v) ? v.filter(valid) : []; }
+  catch (e) { return []; }
+};
+export function submit(resp) { const v = mine(); v.push({...resp, mine: true, at: new Date().toISOString().slice(0, 10)}); return store.set(KEY, JSON.stringify(v)); }
 export const resetMine = () => store.set(KEY, '[]');
 export const myCount = () => mine().length;
 
 const cache = {};
-export function responses(soc, plans) {
+export function responses(soc, plans, source = 'sample') {
   cache[soc] ||= samples(soc, plans);
-  return [...cache[soc], ...mine().filter((x) => x.soc === soc)];
+  return source === 'mine' ? mine().filter((x) => x.soc === soc) : [...cache[soc]];
 }
 
 /* ---------- totals: nothing is shown for a group under MIN_CELL responses ---------- */
 export const MIN_CELL = 10;
 const share = (n, d) => (d ? n / d : null);
-export function totals(soc, plans, region = '') {
-  const all = responses(soc, plans).filter((x) => !region || x.region === region);
+export function totals(soc, plans, region = '', source = 'sample') {
+  const all = responses(soc, plans, source).filter((x) => !region || x.region === region);
   const W = all.filter((x) => x.side === 'worker'), E = all.filter((x) => x.side === 'employer');
   const okW = W.length >= MIN_CELL, okE = E.length >= MIN_CELL;
   const acts = actsFor(soc, plans).map((id) => {

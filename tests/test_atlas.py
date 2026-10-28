@@ -3,6 +3,7 @@
 Run: python -m unittest discover -s tests
 """
 import json
+import os
 import unittest
 from io import StringIO
 from unittest.mock import patch
@@ -20,6 +21,7 @@ FIXTURE = ROOT / "tests" / "fixtures" / "careerbridge_synthetic.json"
 POSTURES = {"Stay the course", "Upskill in place", "Stay and reposition", "Prepare to move"}
 
 
+@unittest.skipIf(os.environ.get("CB_SKIP_DATA_TESTS"), "protected data excluded from this run")
 @unittest.skipUnless(ATLAS.exists(), "data/atlas.json not built (python pipeline/atlas.py)")
 class AtlasTest(unittest.TestCase):
     @classmethod

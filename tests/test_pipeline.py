@@ -4,6 +4,7 @@ Run:  python pipeline/build.py && python -m unittest tests/test_pipeline.py -v
 Stdlib only. Skips the reference comparison if reference_prototype.json is missing.
 """
 import json
+import os
 import unittest
 from pathlib import Path
 
@@ -21,6 +22,7 @@ QUADRANTS = {"High exposure, low adoption", "High exposure, high adoption",
              "Too few MA job ads to measure"}
 
 
+@unittest.skipIf(os.environ.get("CB_SKIP_DATA_TESTS"), "protected data excluded from this run")
 @unittest.skipUnless(BUILT.exists(), "data/careerbridge.json not built (needs the Lightcast files; see README)")
 class TestCareerBridge(unittest.TestCase):
     @classmethod

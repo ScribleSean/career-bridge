@@ -5,11 +5,14 @@ Python 3.9 standard library only. Usage: python server.py [--port 8000]
 Data file: env CB_DATA, else data/careerbridge.json, else data/reference_prototype.json.
 """
 import argparse
+import ipaddress
 import json
 import mimetypes
 import os
 import re
 import sys
+import traceback
+import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -74,6 +77,11 @@ def resolve_data_path():
     return os.path.join(HERE, "data", "reference_prototype.json"), True
 
 
+def fold(text):
+    return "".join(c for c in unicodedata.normalize("NFD", text or "")
+                   if not unicodedata.category(c).startswith("M")).lower()
+
+
 class Store:
     """Loads the data once and keeps indexes for search and board queries."""
 
@@ -110,7 +118,7 @@ class Store:
         self.families = sorted({o.get("major_group") or "" for o in self.occ} - {""})
         # Search index: largest jobs first.
         self.ranked = sorted(self.occ, key=lambda o: -(o.get("ma_employment") or 0))
-        self.lower_titles = {o["soc"]: (o.get("title") or "").lower() for o in self.occ}
+        self.lower_titles = {o["soc"]: fold(o.get("title")) for o in self.occ}
         self.summary = self._board_summary()
 
     def _board_summary(self):
@@ -137,11 +145,12 @@ class Store:
 
     def _words(self, text):
         words = []
-        for w in (text or "").lower().split():
-            w = re.sub(r"[^\w*-]", "", w)
+        for w in fold(text).split():
+            w = re.sub(r"[^\w*-]", "", w, flags=re.ASCII)
             if not w:
                 continue
-            words.extend(ALIASES.get(w, w).split())
+            words.extend(x[:-1] if len(x) > 3 and x.endswith("s") else x
+                         for x in ALIASES.get(w, w).split())
         return words
 
     @staticmethod
@@ -216,7 +225,7 @@ class Store:
     def board(self, params):
         quadrant = params.get("quadrant", "")
         family = params.get("family", "")
-        words = (params.get("q", "") or "").lower().split()
+        words = self._words(params.get("q", ""))
         sort = params.get("sort", "ma_employment")
         if sort not in BOARD_SORT_KEYS:
             sort = "ma_employment"
@@ -233,7 +242,7 @@ class Store:
             if family and o.get("major_group") != family:
                 continue
             title = self.lower_titles[o["soc"]]
-            if words and not all(w in title for w in words):
+            if words and not self._match(title, words):
                 continue
             rows.append(o)
 
@@ -310,9 +319,10 @@ def make_handler(store):
                 if path.startswith("/api/"):
                     return self._api(path, params)
                 return self._static(path)
-            except Exception as e:  # never take the server down on one bad request
+            except Exception:  # never take the server down on one bad request
+                traceback.print_exc(file=sys.stderr)
                 try:
-                    self._json({"error": "server error", "detail": str(e)}, 500)
+                    self._json({"error": "server error"}, 500)
                 except Exception:
                     pass
 
@@ -361,7 +371,14 @@ def make_handler(store):
     return Handler
 
 
-def make_server(port=8000, host="127.0.0.1", data_path=None):
+def make_server(port=8000, host="127.0.0.1", data_path=None, allow_remote=False):
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = host.lower() == "localhost"
+    if not loopback and not allow_remote:
+        raise ValueError("Non-loopback host refused: the licensed file would be served with no auth. "
+                         "Pass --allow-remote to allow remote access.")
     if data_path:
         store = Store(data_path, using_reference=os.path.basename(data_path) == "reference_prototype.json")
     else:
@@ -377,8 +394,12 @@ def main():
     ap = argparse.ArgumentParser(description="Career Bridge server")
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
     ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--allow-remote", action="store_true")
     args = ap.parse_args()
-    httpd = make_server(args.port, args.host)
+    try:
+        httpd = make_server(args.port, args.host, allow_remote=args.allow_remote)
+    except ValueError as e:
+        ap.error(str(e))
     s = httpd.store
     print("Career Bridge: %d occupations from %s" % (len(s.occ), s.path))
     if s.lite:

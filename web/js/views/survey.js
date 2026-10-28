@@ -44,11 +44,11 @@ export function renderSurvey(root, ctx, params) {
       if (Object.keys(need).length < 2) { msg.textContent = 'Mark at least two activities the role needs.'; return; }
       resp = {side: 'employer', soc: job.soc, region: f.get('region'), need, growing: f.getAll('grow'), ads: f.get('ads'), train: f.get('train'), size: f.get('size')};
     }
-    submit(resp);
+    if (!submit(resp)) { msg.textContent = 'Could not save your answers. Try again.'; return; }
     announce('Thank you. Your answers were saved.');
     root.replaceChildren(h('div', {class: 'surveyview'}, h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'Thank you')),
-      h('section', {class: 'panel'}, h('p', {class: 'lede'}, `Your answers are counted in the totals for ${jobShort(job.soc).toLowerCase()}.`),
-        h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/results?job=${job.soc}`}, 'See the results'), h('a', {class: 'btn', href: '#/survey'}, 'Answer for another job')))));
+      h('section', {class: 'panel'},
+        h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/results?job=${job.soc}&source=mine`}, 'See the results'), h('a', {class: 'btn', href: '#/survey'}, 'Answer for another job')))));
     document.getElementById('view-title').focus();
   }},
     q(1, 'Where do you work?', h('label', {class: 'sel'}, h('span', {class: 'sr'}, 'Region'), region)),
@@ -58,26 +58,25 @@ export function renderSurvey(root, ctx, params) {
          q(5, WORKER_Q.help.q, checks('help', WORKER_Q.help.opts)), q(6, WORKER_Q.years.q, radios('years', WORKER_Q.years.opts))]
       : [q(3, EMPLOYER_Q.ads.q, radios('ads', EMPLOYER_Q.ads.opts)), q(4, EMPLOYER_Q.train.q, radios('train', EMPLOYER_Q.train.opts)), q(5, EMPLOYER_Q.size.q, radios('size', EMPLOYER_Q.size.opts))]),
     msg,
-    h('div', {class: 'actions'}, h('button', {type: 'submit', class: 'btn primary'}, 'Submit'), h('a', {class: 'btn', href: '#/survey'}, 'Back')),
-    h('p', {class: 'fine'}, 'Demo: your answers stay in this browser. A real survey would be anonymous, run through channels people already use, and published only as totals.'));
+    h('div', {class: 'actions'}, h('button', {type: 'submit', class: 'btn primary'}, 'Submit'), h('a', {class: 'btn', href: '#/survey'}, 'Back')));
 
   root.replaceChildren(h('div', {class: 'surveyview'},
     h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, `${jobShort(job.soc)}: ${as === 'worker' ? 'how you work' : 'what the role needs'}`),
-      h('p', {class: 'lede'}, as === 'worker' ? 'About five minutes. Only counted in totals.' : 'About three minutes. Only counted in totals.')),
+      h('p', {class: 'lede'}, `${as === 'worker' ? 'About five minutes' : 'About three minutes'}. Stored as-is in this browser until you choose “Clear my answers”.`)),
     form));
 }
 
 function renderPick(root, ctx) {
   root.replaceChildren(h('div', {class: 'surveyview'},
     h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'AI at work: a short survey'),
-      h('p', {class: 'lede'}, 'For people who do these jobs, and for employers who hire for them. Answers are only ever counted in totals.')),
+      h('p', {class: 'lede'}, 'Stored as-is in this browser until you choose “Clear my answers”.')),
     h('ul', {class: 'jobcards'}, JOBS.map((j) => {
       const o = ctx.model.bySoc.get(j.soc);
       return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
         h('p', {class: 'fine'}, o?.jobs == null ? 'Not enough data' : `${fmt.n(o.jobs)} ${ctx.model.geo === 'US' ? 'US' : 'Massachusetts'} workers`), src('oews'),
         h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/survey?job=${j.soc}&as=worker`}, 'I do this job'), h('a', {class: 'btn', href: `#/survey?job=${j.soc}&as=employer`}, 'I hire for this job')));
     })),
-    myCount() ? h('p', {class: 'fine'}, `You've answered ${myCount()} time${myCount() === 1 ? '' : 's'} in this browser. `, h('button', {type: 'button', class: 'linkbtn', onclick: () => { resetMine(); renderPick(root, ctx); announce('Your answers were cleared.'); }}, 'Clear my answers')) : null));
+    myCount() ? h('p', {class: 'fine'}, `You've answered ${myCount()} time${myCount() === 1 ? '' : 's'} in this browser. `, h('button', {type: 'button', class: 'linkbtn', onclick: () => { if (resetMine()) { renderPick(root, ctx); announce('Your answers were cleared.'); } else { announce('Could not clear your answers. Try again.'); } }}, 'Clear my answers')) : null));
 }
 
 /* ------------------------------------------------------------------ results */
@@ -85,7 +84,8 @@ export function renderResults(root, ctx, params) {
   const {model} = ctx;
   const job = JOBS.find((j) => j.soc === params.job) || JOBS[0];
   const region = REGIONS.includes(params.region) ? params.region : '';
-  const t = totals(job.soc, model.plans, region);
+  const source = params.source === 'mine' ? 'mine' : 'sample';
+  const t = totals(job.soc, model.plans, region, source);
   const set = (patch) => ctx.go('results', {...params, ...patch});
   const tile = (v, k, n) => h('div', {class: 'stat'}, h('span', {class: 'v'}, v), h('span', {class: 'k'}, k), h('span', {class: 'n'}, n));
   const hidden = (who, n) => h('p', {class: 'empty'}, `Fewer than ${MIN_CELL} ${who} answered here (${n}), so these totals are hidden.`);
@@ -102,7 +102,9 @@ export function renderResults(root, ctx, params) {
 
   root.replaceChildren(h('div', {class: 'resultsview'},
     h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'Survey results')),
-    sampleNote(),
+    h('div', {class: 'segs', role: 'group', 'aria-label': 'Responses'}, [['sample', 'Sample'], ['mine', 'Your answers']].map(([value, label]) =>
+      h('button', {type: 'button', class: 'seg', 'aria-pressed': String(source === value), onclick: () => set({source: value})}, label))),
+    source === 'sample' ? sampleNote() : h('span', {class: 'src'}, 'Your answers · this browser'),
     h('div', {class: 'boardbar'},
       h('div', {}, h('span', {class: 'lbl', id: 'jl'}, 'Job'), h('div', {class: 'segs', role: 'group', 'aria-labelledby': 'jl'}, JOBS.map((j) => h('button', {type: 'button', class: 'seg', 'aria-pressed': String(j.soc === job.soc), onclick: () => set({job: j.soc})}, j.short)))),
       h('label', {for: 'rr'}, 'Region', h('select', {id: 'rr', onchange: (e) => set({region: e.target.value})}, h('option', {value: ''}, 'All of Massachusetts'), REGIONS.map((x) => h('option', {value: x, selected: x === region}, x))))),

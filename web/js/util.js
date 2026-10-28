@@ -24,7 +24,7 @@ export function svg(tag, attrs = {}, ...kids) {
 
 export const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
 };
 
 const nf = new Intl.NumberFormat('en-US');

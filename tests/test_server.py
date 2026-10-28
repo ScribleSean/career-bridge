@@ -3,6 +3,12 @@
 Run: python -m unittest discover -s tests
 """
 import json
+import io
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 import os
 import sys
 import threading
@@ -21,6 +27,7 @@ import server  # noqa: E402
 REF = os.path.join(ROOT, "data", "reference_prototype.json")
 
 
+@unittest.skipIf(os.environ.get("CB_SKIP_DATA_TESTS"), "protected data excluded from this run")
 @unittest.skipUnless(os.path.exists(REF), "reference_prototype.json not present")
 class ServerTest(unittest.TestCase):
     @classmethod
@@ -177,6 +184,7 @@ class ServerTest(unittest.TestCase):
 BUILT = os.path.join(ROOT, "data", "careerbridge.json")
 
 
+@unittest.skipIf(os.environ.get("CB_SKIP_DATA_TESTS"), "protected data excluded from this run")
 @unittest.skipUnless(os.path.exists(BUILT), "careerbridge.json not built")
 class BuiltDataTest(unittest.TestCase):
     """New fields for "Following software's path?" against the built data."""
@@ -214,6 +222,99 @@ class BuiltDataTest(unittest.TestCase):
         self.assertEqual(st, sorted(st))  # level, behind (ascending), not started, then blanks
         yb = [r["years_behind_software"] for r in b["rows"] if r["software_path_status"] == "behind"]
         self.assertEqual(yb, sorted(yb))
+
+
+class SyntheticServerTest(unittest.TestCase):
+    def test_search_accents(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "synthetic.json"
+            path.write_text(json.dumps({"occ": [
+                {"soc": "1", "title": "Résumé Writer"},
+                {"soc": "2", "title": "Cafeteria Worker"},
+                {"soc": "3", "title": "Café Manager"}]}))
+            store = server.Store(str(path))
+        for query in ("résumé writer", "resume writer", "re\u0301sume\u0301 writer"):
+            self.assertEqual([o["soc"] for o in store.search(query)], ["1"])
+        for query in ("café", "cafe", "cafe\u0301"):
+            self.assertIn("3", [o["soc"] for o in store.search(query)])
+        self.assertEqual([o["soc"] for o in store.search("writ")], ["1"])  # partial words still match while typing
+        self.assertEqual(store._words("résumé café"), ["resume", "cafe"])
+        self.assertIn("3", [o["soc"] for o in store.board({"q": "café"})["rows"]])
+
+    def test_remote_host_requires_explicit_flag_before_loading_data(self):
+        with patch.object(server, "Store") as store, patch.object(server, "ThreadingHTTPServer") as http:
+            for host in ("0.0.0.0", "::", "192.168.1.2", "example.com", ""):
+                with self.assertRaisesRegex(ValueError, "licensed file would be served with no auth"):
+                    server.make_server(host=host, data_path="synthetic.json")
+            store.assert_not_called()
+            http.assert_not_called()
+            for host in ("127.0.0.1", "127.0.0.2", "::1", "localhost"):
+                server.make_server(host=host, data_path="synthetic.json")
+            server.make_server(host="0.0.0.0", data_path="synthetic.json", allow_remote=True)
+            http.assert_called_with(("0.0.0.0", 8000), unittest.mock.ANY)
+
+    def test_cli_reports_remote_refusal_and_passes_override(self):
+        with patch.object(sys, "argv", ["server.py", "--host", "0.0.0.0"]), \
+                patch.object(sys, "stderr", new_callable=io.StringIO) as err:
+            with self.assertRaises(SystemExit) as exit:
+                server.main()
+            self.assertEqual(exit.exception.code, 2)
+            self.assertIn("--allow-remote", err.getvalue())
+            self.assertIn("licensed file would be served with no auth", err.getvalue())
+        with patch.object(sys, "argv", ["server.py", "--host", "0.0.0.0", "--allow-remote"]), \
+                patch.object(server, "make_server") as make, patch("builtins.print"):
+            server.main()
+            make.assert_called_once_with(8000, "0.0.0.0", allow_remote=True)
+
+    def test_500_hides_exception_and_logs_to_stderr(self):
+        store = MagicMock()
+        store.meta_payload.side_effect = RuntimeError("private file detail")
+        handler = object.__new__(server.make_handler(store))
+        handler.path = "/api/meta"
+        handler._json = MagicMock()
+        with patch.object(sys, "stderr", new_callable=io.StringIO) as err:
+            handler.do_GET()
+        handler._json.assert_called_once_with({"error": "server error"}, 500)
+        self.assertIn("private file detail", err.getvalue())
+
+
+class StaticBuildTest(unittest.TestCase):
+    def test_allowlist_and_forbidden_output(self):
+        # Every input and output is synthetic; never read the workspace data/ or site/.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(Path(ROOT) / "build-site.sh", root / "build-site.sh")
+            for folder in ("web/js", "web/img", "web/assets", "data"):
+                (root / folder).mkdir(parents=True)
+            for name in ("index.html", "app.js", "styles.css", "js/app.js", "img/icon.svg", "assets/icon.svg",
+                         "careerbridge.json", "ma_growth.json", "private.csv", "notes.txt"):
+                (root / "web" / name).write_text("synthetic")
+            for name in ("atlas.json", "titles.json"):
+                (root / "data" / name).write_text("{}")
+            def build():
+                return subprocess.run(["sh", "build-site.sh"], cwd=root, capture_output=True, text=True)
+            result = build()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual({str(p.relative_to(root / "site")) for p in (root / "site").rglob("*") if p.is_file()},
+                             {"index.html", "app.js", "styles.css", "js/app.js", "img/icon.svg", "assets/icon.svg",
+                              "atlas.json", "titles.json", ".nojekyll"})
+            for name in ("careerbridge.json", "ma_growth.json", "leak.csv"):
+                leak = root / "web" / "assets" / name
+                leak.write_text("synthetic")
+                result = build()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Build refused", result.stderr)
+                leak.unlink()
+
+
+class WebDiscoveryTest(unittest.TestCase):
+    def test_node_suite(self):
+        """unittest's default test*.py pattern otherwise misses web.test.mjs."""
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("node not installed")
+        result = subprocess.run([node, "--test", "tests/"], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
