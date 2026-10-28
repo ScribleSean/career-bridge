@@ -1,5 +1,5 @@
 // The AI-at-work survey (#/survey) and its results (#/results). Results are totals only, with small groups hidden.
-import {h, announce} from '../util.js';
+import {h, announce, fmt, src} from '../util.js';
 import {JOBS, jobShort, ACT, actsFor, REGIONS, AI_LEVELS, WORKER_Q, EMPLOYER_Q, submit, totals, MIN_CELL, myCount, resetMine} from '../survey.js';
 
 const pct = (v) => (v == null ? '—' : `${Math.round(v * 100)}%`);
@@ -74,7 +74,7 @@ function renderPick(root, ctx) {
     h('ul', {class: 'jobcards'}, JOBS.map((j) => {
       const o = ctx.model.bySoc.get(j.soc);
       return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
-        o ? h('p', {class: 'fine'}, `${Math.round(o.jobs).toLocaleString('en-US')} Massachusetts workers (BLS OEWS May 2025)`) : null,
+        h('p', {class: 'fine'}, o?.jobs == null ? 'Not enough data' : `${fmt.n(o.jobs)} ${ctx.model.geo === 'US' ? 'US' : 'Massachusetts'} workers`), src('oews'),
         h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/survey?job=${j.soc}&as=worker`}, 'I do this job'), h('a', {class: 'btn', href: `#/survey?job=${j.soc}&as=employer`}, 'I hire for this job')));
     })),
     myCount() ? h('p', {class: 'fine'}, `You've answered ${myCount()} time${myCount() === 1 ? '' : 's'} in this browser. `, h('button', {type: 'button', class: 'linkbtn', onclick: () => { resetMine(); renderPick(root, ctx); announce('Your answers were cleared.'); }}, 'Clear my answers')) : null));

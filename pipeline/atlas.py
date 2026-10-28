@@ -48,6 +48,7 @@ def build():
             "us_jobs": int(r.emp2025), "ma_jobs": None if m is None else nn(m.EMPLOYMENT, 0),
             "us_wage": nn(r.wage2025, 0), "ma_wage": None if m is None else nn(m.A_MEDIAN, 0),
             "g": nn(r.g * 100),          # % a year, 2019-2025 (US OEWS, winsorized)
+            "growth_pct": nn(r.get("cagr_19_25", float("nan")) * 100),  # uncapped US yearly change
             "z": nn(r.z * 100, 1),       # Claude exposure percentile, 0-100
             "basis": r.z_basis, "auto": nn(r.auto_share * 100, 1), "tier": r.tier, "posture": p.get("posture"),
             "edu": p.get("education"), "prep": p.get("preparation"),

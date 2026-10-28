@@ -1,7 +1,7 @@
 // Career Bridge shell: loads data, owns the shared state (place), routes, and runs the search box.
 //   #/   overview     #/survey?job=&as=worker|employer   the survey     #/results?job=&region=   totals
 //   #/job/<soc>   one job (for career counselors)     #/board   workforce board (private build)     #/about
-import {$, h, store, announce, loading, errorBox, reduceMotion} from './js/util.js';
+import {$, h, store, announce, loading, errorBox, reduceMotion, parseHash} from './js/util.js';
 import {loadData, makeModel} from './js/data.js';
 import {loadTitles, search} from './js/search.js';
 import {renderJob} from './js/views/job.js';
@@ -22,13 +22,6 @@ const ctx = {state, selected: null,
   go: (view, params = {}, soc) => { location.hash = hashFor(view, params, soc); }};
 
 /* ---------- routing ---------- */
-function parseHash() {
-  const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
-  const parts = path.split('/').filter(Boolean);
-  const params = Object.fromEntries(new URLSearchParams(query));
-  const view = !parts.length ? 'overview' : ['overview', 'survey', 'results', 'board', 'about'].includes(parts[0]) ? parts[0] : 'job';
-  return {view, params, soc: view === 'job' ? decodeURIComponent(parts[1] || '') : ''};
-}
 function hashFor(view, params = {}, soc = '') {
   const p = {...params};
   const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== '' && v != null)).toString();
@@ -37,7 +30,9 @@ function hashFor(view, params = {}, soc = '') {
 let lastKey = null;
 let lastSoc = store.get('cb-last') || DEFAULT_SOC;
 function route() {
-  const r = parseHash();
+  const parsed = parseHash(location.hash);
+  if (!parsed && lastKey !== null) return;
+  const r = parsed || {view: 'overview', params: {}, soc: ''};
   if (r.view === 'job' && !r.soc) { history.replaceState(null, '', hashFor('job', {}, model.bySoc.has(lastSoc) ? lastSoc : DEFAULT_SOC)); return route(); }
   if (r.view === 'board' && !model.full) { history.replaceState(null, '', '#/'); return route(); }
   drawNav(r);

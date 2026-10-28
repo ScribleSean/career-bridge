@@ -64,3 +64,18 @@ export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)')
 
 export const loading = (msg) => h('div', {class: 'status', role: 'status'}, h('div', {class: 'spinner', 'aria-hidden': 'true'}), h('span', {}, msg));
 export const errorBox = (msg, retry) => h('div', {class: 'status err', role: 'alert'}, h('span', {}, msg), retry ? h('button', {type: 'button', onclick: retry}, 'Try again') : null);
+
+/** Route hashes use #/. Other fragments belong to the browser's in-page navigation. */
+export function parseHash(hash) {
+  if (hash && !hash.startsWith('#/')) return null;
+  const [path, query = ''] = hash.replace(/^#\/?/, '').split('?');
+  const parts = path.split('/').filter(Boolean);
+  const view = parts[0] || 'overview';
+  const overview = {view: 'overview', params: {}, soc: ''};
+  if (!['overview', 'survey', 'results', 'board', 'about', 'job'].includes(view)) return overview;
+  try {
+    return {view, params: Object.fromEntries(new URLSearchParams(query)), soc: view === 'job' ? decodeURIComponent(parts[1] || '') : ''};
+  } catch {
+    return overview;
+  }
+}

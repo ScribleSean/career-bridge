@@ -26,7 +26,8 @@ export function renderBoard(root, ctx, params) {
   const q = (params.q || '').toLowerCase();
   const sort = {key: params.sort || 'jobs', dir: params.dir === 'asc' ? 'asc' : 'desc'};
   const set = (patch) => ctx.go('board', {...params, ...patch});
-  const withLc = model.occ.filter((o) => o.lc);
+  const withLc = model.all.filter((o) => o.lc && o.ma_jobs != null)
+    .map((o) => ({...o, jobs: o.ma_jobs, wage: o.ma_wage}));
   const allWorkers = withLc.reduce((s, o) => s + o.jobs, 0);
   const rows = withLc.filter((o) => (!quad || (quad === SILENT ? o.lc.silent_gap : o.lc.quadrant === quad)) && (!family || o.group === family) && (!q || o.title.toLowerCase().includes(q)));
   const stateRate = model.lcMeta?.state_rate_2025 ?? 6.18;
@@ -63,7 +64,7 @@ export function renderBoard(root, ctx, params) {
     {key: 'ads', label: 'MA ads asking for AI', num: true, src: 'lc', value: (o) => o.lc.ma_ai_2025, cell: (o) => fmt.pct(o.lc.ma_ai_2025)},
     {key: 'quad', label: 'Where it stands', opt: true, value: (o) => QLABEL[o.lc.quadrant] + (o.lc.silent_gap ? ' · silent gap' : '')},
     {key: 'wage', label: 'Median pay', num: true, opt: true, src: 'oews', value: (o) => o.wage, cell: (o) => fmt.usd(o.wage)},
-    {key: 'claude', label: 'Claude use (0–100)', num: true, opt: true, src: 'aei', value: (o) => o.z, cell: (o) => Math.round(o.z)},
+    {key: 'claude', label: 'Claude use (0–100)', num: true, opt: true, src: 'aei', value: (o) => o.z, cell: (o) => o.z == null ? 'Not enough data' : Math.round(o.z)},
   ];
   const col = cols.find((c) => c.key === sort.key) || cols[1];
   root.replaceChildren(h('div', {class: 'boardview'},

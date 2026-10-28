@@ -1,5 +1,5 @@
 // Overview: the finding, the survey that follows from it, and a small pilot. Written for state and workforce leaders.
-import {h} from '../util.js';
+import {h, fmt, src} from '../util.js';
 import {JOBS, totals} from '../survey.js';
 
 const pct = (v) => (v == null ? '—' : `${Math.round(v * 100)}%`);
@@ -33,8 +33,8 @@ export function renderOverview(root, ctx) {
       h('ul', {class: 'jobcards'}, JOBS.map((j) => {
         const o = model.bySoc.get(j.soc);
         return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
-          o ? h('p', {}, h('b', {}, Math.round(o.jobs).toLocaleString('en-US')), ' Massachusetts workers · median pay ', h('b', {}, '$' + Math.round(o.wage).toLocaleString('en-US'))) : null,
-          h('p', {class: 'fine'}, 'BLS OEWS May 2025'),
+          h('p', {}, o?.jobs == null ? 'Not enough data' : [h('b', {}, fmt.n(o.jobs)), ` ${model.geo === 'US' ? 'US' : 'Massachusetts'} workers · median pay `, h('b', {}, o.wage == null ? 'Not enough data' : fmt.usd(o.wage))]),
+          src('oews'),
           h('div', {class: 'actions'}, h('a', {class: 'btn', href: ctx.hrefJob(j.soc)}, 'Job details'), h('a', {class: 'btn', href: `#/results?job=${j.soc}`}, 'Sample results')));
       })),
       h('p', {class: 'fine'}, `In the sample results for administrative assistants, ${pct(t.useAnyAI)} of workers use an AI tool for work and ${pct(t.adsMentionAI)} of employers mention AI in ads. These are made-up numbers that show how a result would read.`)),

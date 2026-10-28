@@ -44,3 +44,136 @@ test('a group with fewer than 10 responses is hidden', () => {
   if (t.nE < MIN_CELL) { assert.equal(t.okE, false); assert.equal(t.adsMentionAI, null); }
   assert.ok(t.nW < MIN_CELL || t.nE < MIN_CELL, 'the smallest region should fall under the cutoff in the samples');
 });
+
+import {makeModel} from '../web/js/data.js';
+import {parseHash} from '../web/js/util.js';
+import {renderJob} from '../web/js/views/job.js';
+import {renderOverview} from '../web/js/views/overview.js';
+import {renderSurvey} from '../web/js/views/survey.js';
+import {renderBoard, QUADS} from '../web/js/views/board.js';
+
+// Only the DOM operations used by the renderers. No browser or data files needed.
+class Element {
+  nodeType = 1;
+  children = [];
+  attrs = {};
+  constructor(tag) { this.tag = tag; }
+  append(...kids) { this.children.push(...kids); }
+  replaceChildren(...kids) { this.children = kids; }
+  setAttribute(k, v) { this.attrs[k] = String(v); }
+  addEventListener() {}
+  get textContent() { return this.children.map((c) => typeof c === 'object' ? c.textContent : c).join(''); }
+  set textContent(v) { this.children = [v]; }
+}
+globalThis.document = {createElement: (tag) => new Element(tag), createElementNS: (_, tag) => new Element(tag)};
+function nodes(root, predicate) {
+  return [root, ...root.children.filter((c) => typeof c === 'object').flatMap((c) => nodes(c, () => true))].filter(predicate);
+}
+function context(geo = 'MA', patch = {}, licensed = false) {
+  const o = {soc: JOBS[0].soc, title: 'Example job', group: 'Example', ma_jobs: 1200, us_jobs: 900000,
+    ma_wage: 60000, us_wage: 80000, g: 5, growth_pct: 12, z: 50, ...patch};
+  const model = makeModel({atlas: {meta: {scenarios: {}}, occ: [o], plans: {}}, cb: licensed ? {
+    meta: {}, occ: [{soc: o.soc, exposure: 60, ma_ai_2025: .5, quadrant: QUADS[0], silent_gap: true}],
+    strengths: {[o.soc]: [['Missing importance', null, 1], ['Missing difference', 4, null], ['Valid strength', 4, 1]]},
+  } : null}, geo);
+  return {model, state: {geo}, hrefJob: (soc) => `#/job/${soc}`, go() {}};
+}
+function render(fn, ctx, ...args) { const root = new Element('root'); fn(root, ctx, ...args); return root; }
+
+test('growth fact uses uncapped US change, with an honestly labeled capped fallback', () => {
+  for (const [growth_pct, label, value] of [[12, 'US change a year, 2019–25', '+12.0%'], [null, 'Capped US change a year, 2019–25', '+5.0%']]) {
+    const ctx = context('MA', {growth_pct});
+    const root = render(renderJob, ctx, ctx.model.all[0]);
+    const fact = nodes(root, (n) => n.className === 'fact').find((n) => n.textContent.startsWith(label));
+    assert.ok(fact);
+    assert.ok(fact.textContent.includes(value));
+    assert.ok(fact.textContent.includes('BLS OEWS 2019–2025'));
+  }
+});
+
+test('pilot cards follow geography and the board always uses MA counts and wages', () => {
+  for (const geo of ['MA', 'US']) {
+    const ctx = context(geo, {}, true);
+    for (const fn of [renderOverview, renderSurvey]) {
+      const root = render(fn, ctx, {});
+      const cards = nodes(root, (n) => n.className === 'jobcard');
+      assert.ok(cards[0].textContent.includes(geo === 'MA' ? '1,200 Massachusetts workers' : '900,000 US workers'));
+      assert.ok(cards[0].textContent.includes('BLS OEWS May 2025'));
+    }
+    const board = render(renderBoard, ctx, {});
+    assert.ok(board.textContent.includes('1,200 MA workers'));
+    assert.ok(board.textContent.includes('$60,000'));
+    assert.ok(!board.textContent.includes('900,000'));
+    assert.ok(!board.textContent.includes('$80,000'));
+  }
+  const ctx = context('US', {ma_jobs: null}, true);
+  assert.ok(render(renderBoard, ctx, {}).textContent.includes('0 jobs · 0 MA workers'));
+});
+
+test('missing exposure, AI use, strengths, counts and pay never become zero or throw', () => {
+  const ctx = context('MA', {z: null, ma_jobs: null, ma_wage: null}, true);
+  ctx.model.all[0].lc.exposure = null;
+  ctx.model.all[0].capPct = null;
+  const job = render(renderJob, ctx, ctx.model.all[0]);
+  assert.ok(job.textContent.includes('Not enough data'));
+  assert.ok(!job.textContent.includes('Top 100%'));
+  assert.ok(!job.textContent.includes('0 of 100'));
+  assert.ok(!job.textContent.includes('Missing importance'));
+  assert.ok(!job.textContent.includes('Missing difference'));
+  assert.ok(job.textContent.includes('Valid strength 4.0'));
+  for (const fn of [renderOverview, renderSurvey]) {
+    const root = render(fn, ctx, {});
+    const card = nodes(root, (n) => n.className === 'jobcard')[0];
+    assert.ok(card.textContent.includes('Not enough data'));
+    assert.ok(!card.textContent.includes('0 Massachusetts workers'));
+    assert.ok(!card.textContent.includes('$0'));
+  }
+  const payCtx = context('MA', {ma_wage: null});
+  assert.ok(render(renderOverview, payCtx).textContent.includes('median pay Not enough data'));
+  const boardCtx = context('US', {z: null}, true);
+  const board = render(renderBoard, boardCtx, {});
+  const row = nodes(board, (n) => n.tag === 'tbody')[0].children[0];
+  assert.equal(row.children.at(-1).textContent, 'Not enough data');
+  const zeroCtx = context('MA', {z: 0});
+  assert.ok(render(renderJob, zeroCtx, zeroCtx.model.all[0]).textContent.includes('Top 100%'));
+});
+
+test('routing falls back on malformed routes and leaves in-page fragments to the browser', () => {
+  assert.deepEqual(parseHash('#/job/%'), {view: 'overview', params: {}, soc: ''});
+  assert.equal(parseHash('#main'), null);
+  assert.equal(parseHash('#anything'), null);
+  assert.equal(parseHash('#/unknown').view, 'overview');
+  assert.equal(parseHash('').view, 'overview');
+  assert.deepEqual(parseHash('#/job/43%2D6014?x=1'), {view: 'job', soc: '43-6014', params: {x: '1'}});
+  assert.equal(parseHash('#/survey?job=43-6014').view, 'survey');
+});
+
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+
+test('hashchange preserves the current view for #main and renders overview for bad decoding', () => {
+  const app = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
+  const route = app.slice(app.indexOf('function route()'), app.indexOf('\nfunction drawNav'));
+  const root = new Element('root');
+  root.contains = () => false;
+  root.append('Current job');
+  let rendered = 0, navDraws = 0;
+  const sandbox = {
+    parseHash, location: {hash: '#main'}, lastKey: 'job:43-6014',
+    model: {full: false}, ctx: {},
+    document: {activeElement: null, querySelector: () => ({hidden: false})},
+    $: (id) => id === 'view' ? root : null,
+    drawNav() { navDraws++; },
+    renderOverview(view) { rendered++; view.replaceChildren('Overview'); },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(route + '\nroute();', sandbox);
+  assert.equal(root.textContent, 'Current job');
+  assert.equal(rendered, 0);
+  assert.equal(navDraws, 0);
+  sandbox.location.hash = '#/job/%';
+  vm.runInContext('route();', sandbox);
+  assert.equal(root.textContent, 'Overview');
+  assert.equal(rendered, 1);
+  assert.equal(sandbox.lastKey, 'overview');
+});

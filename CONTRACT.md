@@ -55,6 +55,7 @@ Built from BLS OEWS, O*NET and the Anthropic Economic Index only, so it can be h
 { "meta":  {"built_at", "horizon": 6, "scenarios": {"slow"|"base"|"fast": {"A", "P"}}, "usage_period", "oews_year", "sources": [...]},
   "occ":    [{"soc", "title", "group", "us_jobs", "ma_jobs"|null, "us_wage", "ma_wage"|null,
               "g",      // past growth, % a year, US 2019-2025, capped at the 5th/95th percentile
+              "growth_pct"|null, // uncapped yearly change, % a year, US 2019-2025; null if unavailable
               "z",      // where Claude is used today, percentile 0-100
               "basis",  // "usage+content" | "content only (AEI withheld)" | "usage only"
               "auto",   // % of the group's Claude conversations where work was handed off

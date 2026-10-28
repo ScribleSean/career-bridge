@@ -32,7 +32,7 @@ function header(ctx, o) {
     h('dl', {class: 'facts'},
       fact(`${geo} workers, 2025`, fmt.n(o.jobs), 'oews'),
       fact('Median pay', fmt.usd(o.wage), 'oews'),
-      fact('Change a year, 2019–25', fmt.signed(o.g), 'oewsh'),
+      fact(o.growth_pct == null ? 'Capped US change a year, 2019–25' : 'US change a year, 2019–25', fmt.signed(o.growth_pct ?? o.g), 'oewsh'),
       fact('Training', o.prep ? o.prep.replace(/^./, (c) => c.toUpperCase()) : '—', 'onet', true)));
 }
 const fact = (k, v, s, text) => h('div', {class: 'fact' + (text ? ' text' : '')}, h('dt', {}, k), h('dd', {}, h('span', {class: 'fv'}, v), src(s)));
@@ -57,7 +57,7 @@ const named = (anchors, f) => anchors.map(([pos, v]) => [pos, `${f(v)} · ${WORD
 
 function standing(ctx, o) {
   return panel('How much AI is used on this work',
-    h('ul', {class: 'rulers'}, ruler('use', 'circle', 'AI use (Anthropic Economic Index)', Math.round(o.z), o.basis === 'content only (AEI withheld)' ? 'Estimated from tasks' : `${Math.round(o.z)} of 100`,
+    h('ul', {class: 'rulers'}, ruler('use', 'circle', 'AI use (Anthropic Economic Index)', o.z == null ? null : Math.round(o.z), o.z == null ? 'Not enough data' : o.basis === 'content only (AEI withheld)' ? 'Estimated from tasks' : `${Math.round(o.z)} of 100`,
       [[0, '0'], [50, '50'], [100, '100']])));
 }
 
@@ -67,7 +67,7 @@ function lightcastStanding(ctx, o) {
   const adsFmt = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)}%`;
   return panel('Where this job stands with AI',
     h('ul', {class: 'rulers'},
-      ruler('cap', 'square', 'AI overlap', o.capPct, `${o.lc.exposure.toFixed(1)} of 100`, named(m.capAnchors, (v) => v.toFixed(0))),
+      ruler('cap', 'square', 'AI overlap', o.capPct, o.lc.exposure == null ? 'Not enough data' : `${o.lc.exposure.toFixed(1)} of 100`, named(m.capAnchors, (v) => v.toFixed(0))),
       ruler('ads', 'diamond', 'MA job ads asking for AI', o.demandPct, r == null ? 'Too few ads' : `${fmt.pct(r)} of ads`,
         named(m.demandAnchors, adsFmt), {pos: m.demandRank(state), label: `State ${state}%`})));
 }
@@ -203,7 +203,7 @@ function lightcastPanels(ctx, o) {
         desc: 'Employment in this job: ' + series.map((r) => `${r[0]}: ${fmt.n(r[1])}`).join(', ')}),
       g == null ? null : h('p', {class: 'result'}, `${fmt.signed(g, 0)} since ${since} · all MA jobs ${fmt.signed(gm.all_growth_pct, 0)}`)));
   }
-  const tasks = (cb.tasks?.[soc] || []).filter((t) => t[1] > 0), skills = cb.skills?.[soc] || [], strengths = cb.strengths?.[soc] || [];
+  const tasks = (cb.tasks?.[soc] || []).filter((t) => t[1] > 0), skills = cb.skills?.[soc] || [], strengths = (cb.strengths?.[soc] || []).filter((s) => s[1] != null && s[2] != null);
   out.push(panel('What people use AI for in this job',
     tasks.length ? barList(tasks.map((t) => ({label: t[0], value: t[1]})), {fmt: (v) => (v === 0 ? '0' : v.toFixed(v < 0.1 ? 2 : 1)) + '%', unit: 'of US Claude conversations, Apr–May 2026'})
       : h('p', {class: 'empty'}, 'Too few conversations to show'),
@@ -211,7 +211,7 @@ function lightcastPanels(ctx, o) {
     skills.some((s) => s[4]) ? h('div', {class: 'tags'}, skills.filter((s) => s[4]).map((s) => h('span', {class: 'tag aiTag'}, s[1], h('em', {}, s[2] + '%')))) : h('p', {class: 'empty'}, 'None in the top skills')));
   out.push(panel('Your human edge and what employers ask for',
     h('div', {class: 'two'},
-      h('div', {}, h('h4', {}, 'Strengths (importance, 1–5)'), strengths.length ? h('ul', {class: 'list'}, strengths.map((s) => h('li', {}, h('span', {}, h('b', {}, s[0]), ` ${s[1].toFixed(1)}`), h('span', {class: 'meta'}, `+${s[2].toFixed(2)} vs MA average`)))) : h('p', {class: 'empty'}, 'No O*NET skill ratings for this job.')),
+      h('div', {}, h('h4', {}, 'Strengths (importance, 1–5)'), strengths.length ? h('ul', {class: 'list'}, strengths.map((s) => h('li', {}, h('span', {}, h('b', {}, s[0]), ` ${s[1].toFixed(1)}`), h('span', {class: 'meta'}, `+${s[2].toFixed(2)} vs MA average`)))) : h('p', {class: 'empty'}, 'Not enough data')),
       h('div', {class: 'stack'}, [['S', 'Core skills (% of ads)'], ['C', 'Everyday skills (% of ads)'], ['R', 'Certifications (% of ads)']].map(([k, label]) => {
         const arr = skills.filter((s) => s[0] === k);
         return h('div', {}, h('h4', {}, label), arr.length ? h('div', {class: 'tags'}, arr.map((s) => h('span', {class: 'tag' + (s[4] ? ' aiTag' : '')}, s[1], h('em', {}, s[2] + '%')))) : h('p', {class: 'empty'}, 'Not listed'));
