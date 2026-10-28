@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Career Bridge</title>
+<meta name="description" content="Look up your job: see how much of it overlaps with AI, what Massachusetts employers ask for, and where you could go next.">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<div class="govbar"><div class="in">An independent student project. Not affiliated with MassHire or the Commonwealth of Massachusetts.</div></div>
+<header class="masthead">
+  <div class="in mastrow">
+    <a class="brand" href="#/" aria-label="Career Bridge home">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" fill="currentColor"/><path d="M6 27h28M9 27c3-9 19-9 22 0M12 27v-5M20 27v-8M28 27v-5" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="square"/></svg>
+      <span class="word"><b>Career Bridge</b><small>AI at work in Massachusetts</small></span>
+    </a>
+    <div class="mastctl"><div class="geobox"><div class="segs" id="geo" role="group" aria-label="Show numbers for"></div></div></div>
+  </div>
+  <nav class="tabs" id="nav" aria-label="Main"></nav>
+</header>
+<div class="wrap">
+  <section class="find" aria-label="Find your job">
+    <label for="q" class="sr">Find your job</label>
+    <div class="combo">
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Find your job" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results">
+      <ul id="results" role="listbox" aria-label="Matching jobs" hidden></ul>
+    </div>
+    <div class="chips" id="examples" aria-label="Example jobs"></div>
+  </section>
+  <main id="main" tabindex="-1"><p class="notice" id="notice" hidden></p><div id="view"></div></main>
+</div>
+<footer class="sitefoot">
+  <div class="in">
+    <p><b>Career Bridge</b> is an independent student project. It is not affiliated with or endorsed by MassHire, Lightcast or the Commonwealth of Massachusetts.</p>
+    <p><span id="lcnote"></span>Public data: BLS OEWS · O*NET 31.0 · Anthropic Economic Index. Survey results in this demo are sample data.</p>
+    <p>🥉 3rd place, Human Edge Studio by SG+I, October 2026 · <a href="https://github.com/ScribleSean/career-bridge">Source on GitHub</a></p>
+  </div>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

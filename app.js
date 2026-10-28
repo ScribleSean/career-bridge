@@ -1,0 +1,123 @@
+// Career Bridge shell: loads data, owns the shared state (place), routes, and runs the search box.
+//   #/   overview     #/survey?job=&as=worker|employer   the survey     #/results?job=&region=   totals
+//   #/job/<soc>   one job (for career counselors)     #/board   workforce board (private build)     #/about
+import {$, h, store, announce, loading, errorBox, reduceMotion, parseHash} from './js/util.js';
+import {loadData, makeModel} from './js/data.js';
+import {loadTitles, search} from './js/search.js';
+import {renderJob} from './js/views/job.js';
+import {renderBoard} from './js/views/board.js';
+import {renderAbout} from './js/views/about.js';
+import {renderOverview} from './js/views/overview.js';
+import {renderSurvey, renderResults} from './js/views/survey.js';
+
+const DEFAULT_SOC = '43-6014';  // administrative assistants, the first survey job
+const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'],
+  ['13-2011', 'Accountant'], ['29-1141', 'Registered nurse'], ['15-1252', 'Software developer'], ['11-2021', 'Marketing manager'], ['47-2111', 'Electrician']];
+
+let data = null, model = null;
+const state = {geo: store.get('cb-geo') === 'US' ? 'US' : 'MA'};
+const ctx = {state, selected: null,
+  get model() { return model; },
+  hrefJob: (soc) => hashFor('job', {}, soc),
+  go: (view, params = {}, soc) => { location.hash = hashFor(view, params, soc); }};
+
+/* ---------- routing ---------- */
+function hashFor(view, params = {}, soc = '') {
+  const p = {...params};
+  const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== '' && v != null)).toString();
+  return `#/${view}${view === 'job' && soc ? '/' + encodeURIComponent(soc) : ''}${qs ? '?' + qs : ''}`;
+}
+let lastKey = null;
+let lastSoc = store.get('cb-last') || DEFAULT_SOC;
+function route() {
+  const parsed = parseHash(location.hash);
+  if (!parsed && lastKey !== null) return;
+  const r = parsed || {view: 'overview', params: {}, soc: ''};
+  if (r.view === 'job' && !r.soc) { history.replaceState(null, '', hashFor('job', {}, model.bySoc.has(lastSoc) ? lastSoc : DEFAULT_SOC)); return route(); }
+  if (r.view === 'board' && !model.full) { history.replaceState(null, '', '#/'); return route(); }
+  drawNav(r);
+  document.querySelector('.find').hidden = r.view !== 'job';  // job search only where it's used
+  const view = $('view');
+  const activeId = document.activeElement && view.contains(document.activeElement) ? document.activeElement.id : '';
+  let key = r.view;
+  if (r.view === 'job') {
+    const o = model.bySoc.get(r.soc);
+    if (!o || o.jobs == null) {
+      view.replaceChildren(errorBox(o ? `We don’t have a job count for ${o.title} in ${model.geo === 'MA' ? 'Massachusetts' : 'the US'}. Try the other place above, or look up a different job.` : `We couldn’t find that job. Try looking it up in the box above.`));
+      document.title = 'Job not found · Career Bridge';
+      return;
+    }
+    lastSoc = o.soc; ctx.selected = o.soc; store.set('cb-last', o.soc); key = 'job:' + o.soc;
+    if (document.activeElement !== $('q')) $('q').value = o.title;
+    renderJob(view, ctx, o);
+    document.title = `${o.title} · Career Bridge`;
+  } else if (r.view === 'board') { renderBoard(view, ctx, r.params); document.title = 'For workforce boards · Career Bridge'; }
+  else if (r.view === 'overview') { renderOverview(view, ctx); document.title = 'Career Bridge · AI at work in Massachusetts'; }
+  else if (r.view === 'survey') { renderSurvey(view, ctx, r.params); document.title = 'AI at work survey · Career Bridge'; key = 'survey:' + (r.params.job || '') + (r.params.as || ''); }
+  else if (r.view === 'results') { renderResults(view, ctx, r.params); document.title = 'Survey results · Career Bridge'; }
+  else { renderAbout(view, ctx); document.title = 'About the numbers · Career Bridge'; }
+  if (key !== lastKey) {   // new page: move focus to its heading so screen-reader users hear where they are
+    lastKey = key;
+    const head = $('occ-title') || $('view-title');
+    if (head) { head.focus({preventScroll: true}); head.scrollIntoView({block: 'start', behavior: reduceMotion() ? 'auto' : 'smooth'}); }
+  } else if (activeId && $(activeId)) $(activeId).focus({preventScroll: true});  // same page re-rendered: keep focus on the control
+}
+
+function drawNav(r) {
+  const items = [['overview', 'Overview', '#/'], ['survey', 'Survey', hashFor('survey')], ['results', 'Results', hashFor('results')], ['job', 'Look up a job', ctx.hrefJob(lastSoc)], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About', hashFor('about')]];
+  $('nav').replaceChildren(...items.map(([k, label, href]) => h('a', {href, 'aria-current': k === r.view ? 'page' : null}, label)));
+}
+
+/* ---------- place ---------- */
+function drawGeo() {
+  $('geo').replaceChildren(...[['MA', 'Massachusetts'], ['US', 'United States']].map(([k, label]) => h('button', {type: 'button', class: 'seg', 'aria-pressed': String(state.geo === k), onclick: () => {
+    if (state.geo === k) return;
+    state.geo = k; store.set('cb-geo', k); model = makeModel(data, k); drawGeo(); drawExamples(); route(); announce(`Showing numbers for ${label}.`);
+  }}, label)));
+}
+/* ---------- search ---------- */
+const q = $('q'), res = $('results');
+let hits = [], active = -1, timer = null;
+function drawResults() {
+  res.replaceChildren(...hits.map((x, i) => h('li', {role: 'option', id: 'opt' + i, 'aria-selected': String(i === active), onmousedown: (e) => { e.preventDefault(); pick(x.o.soc); }},
+    h('span', {}, x.o.title, x.via ? h('small', {class: 'via'}, ` matched “${x.via}”`) : null), h('small', {}, `${x.o.jobs.toLocaleString('en-US')} jobs`))));
+  res.hidden = !hits.length; q.setAttribute('aria-expanded', String(!!hits.length));
+  hits.length && active >= 0 ? q.setAttribute('aria-activedescendant', 'opt' + active) : q.removeAttribute('aria-activedescendant');
+}
+function runSearch() {
+  const text = q.value.trim();
+  hits = text.length < 2 ? [] : search(text, model.occ); active = hits.length ? 0 : -1; drawResults();
+  if (text.length >= 2) announce(hits.length ? `${hits.length} matching jobs. Use the arrow keys to choose.` : 'No matching jobs.');
+  if (text.length >= 2 && !hits.length) { res.hidden = false; res.replaceChildren(h('li', {role: 'option', 'aria-disabled': 'true'}, 'No matching jobs. Try a shorter word.')); }
+}
+q.addEventListener('input', () => { loadTitles().then(runSearch); clearTimeout(timer); timer = setTimeout(runSearch, 100); });
+q.addEventListener('focus', () => loadTitles());
+q.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' && hits.length) { active = (active + 1) % hits.length; drawResults(); e.preventDefault(); }
+  else if (e.key === 'ArrowUp' && hits.length) { active = (active - 1 + hits.length) % hits.length; drawResults(); e.preventDefault(); }
+  else if (e.key === 'Enter' && active >= 0 && hits[active]) { pick(hits[active].o.soc); e.preventDefault(); }
+  else if (e.key === 'Escape') { hits = []; drawResults(); }
+});
+q.addEventListener('blur', () => setTimeout(() => { hits = []; drawResults(); }, 120));
+function pick(soc) { hits = []; drawResults(); q.blur(); if (location.hash === ctx.hrefJob(soc)) route(); else ctx.go('job', {}, soc); }
+function drawExamples() {
+  $('examples').replaceChildren(...EXAMPLES.filter(([soc]) => model.bySoc.get(soc)?.jobs != null)
+    .map(([soc, name]) => h('button', {class: 'chip', type: 'button', onclick: () => pick(soc)}, name)));
+}
+
+/* ---------- start ---------- */
+(async function start() {
+  const view = $('view');
+  view.replaceChildren(loading('Loading jobs…'));
+  try { data = await loadData(); }
+  catch (e) {
+    view.replaceChildren(errorBox('Couldn’t load the data. Build it with: python pipeline/atlas.py, then start the app with: python server.py'));
+    return;
+  }
+  model = makeModel(data, state.geo);
+  if (model.full) $('lcnote').textContent = 'Data Source: Lightcast, 2026 · ';
+  if (data.cb?.meta?.synthetic) { $('notice').hidden = false; $('notice').textContent = 'Test data: the Lightcast numbers shown are made up for testing.'; }
+  drawGeo(); drawExamples();
+  window.addEventListener('hashchange', route);
+  route();
+})();
