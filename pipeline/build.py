@@ -1,7 +1,7 @@
 """Career Bridge data pipeline: sgi_dataset/ -> data/careerbridge.json.
 
 Run:  python pipeline/build.py      (data folder: $SGI_DATA, else ./sgi_dataset)
-Shape and rules: CONTRACT.md. Choices and differences vs the prototype: NOTES.md.
+Shape and rules: CONTRACT.md.
 
 Method in short
 - One record per SOC 2018 code with MA OEWS employment (May 2025) and a Lightcast exposure score.

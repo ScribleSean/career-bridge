@@ -1,4 +1,4 @@
-"""Open-data layer: sgi_analysis outputs + OEWS + AEI -> data/atlas.json and data/titles.json.
+"""Open-data layer: analysis outputs + OEWS + AEI -> data/atlas.json and data/titles.json.
 
 Run:  python pipeline/atlas.py
 Inputs: occupation_risk.csv, career_plans.json and job_title_index.csv. They are committed in pipeline/atlas_src/
@@ -24,7 +24,7 @@ DATA = Path(os.environ.get("SGI_DATA", REPO / "sgi_dataset" if (REPO / "sgi_data
 OUT = REPO / "data"
 
 # Scenario defaults. A = share of Claude-exposed, handed-off work adopted by 2031; P = share of that adopted work that removes headcount.
-# These are illustrative assumptions, set in sgi_analysis/analysis/occupation_risk.py, not estimates from data.
+# These are illustrative assumptions, used when the analysis outputs were generated, not estimates from data.
 SCENARIOS = {"slow": {"A": 0.10, "P": 0.5}, "base": {"A": 0.25, "P": 0.5}, "fast": {"A": 0.50, "P": 0.5}}
 HORIZON = 6  # May 2025 -> May 2031
 
