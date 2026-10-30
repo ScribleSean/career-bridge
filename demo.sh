@@ -1,6 +1,6 @@
 #!/bin/sh
 # Start Career Bridge for a demo and open the browser.
-#   Open-data build (always): builds data/atlas.json if missing. Needs the sgi_analysis outputs; see README.
+#   Open-data build (always): builds data/atlas.json if missing. Needs the event dataset; see README.
 #   Private build (only if the licensed Lightcast files are present): also builds data/careerbridge.json.
 # Usage: ./demo.sh [port]
 cd "$(dirname "$0")" || exit 1

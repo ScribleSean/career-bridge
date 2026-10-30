@@ -280,7 +280,7 @@ class Store:
         m["lite"] = self.lite
         m["data_file"] = os.path.basename(self.path)
         if self.using_reference:
-            m["warning"] = ("Showing the teammate's reference prototype data. "
+            m["warning"] = ("Showing the reference prototype data. "
                             "Run pipeline/build.py to build data/careerbridge.json.")
         return m
 

@@ -2,7 +2,7 @@
 
 The pipeline writes `data/careerbridge.json`. The server reads it and serves the API. The web app only talks to the API.
 `data/` is gitignored: it holds Lightcast-derived numbers and this repo is public.
-`data/reference_prototype.json` is the teammate's prototype data in the same shape: a reference to compare against, and a stand-in while the pipeline is built.
+`data/reference_prototype.json` (optional, not in the repo) is earlier prototype data in the same shape, used as a reference by `tests/test_pipeline.py`.
 
 ## careerbridge.json
 ```
@@ -38,7 +38,7 @@ The pipeline writes `data/careerbridge.json`. The server reads it and serves the
 - Silent gap: exposure > 50 AND ma_ai_2025 < 1.0, MA not THIN and rate not null. Always a subset of `High exposure, low adoption`.
 - Paths (next moves): cosine similarity >= 0.70 on O*NET skill importance vectors; target MA median wage >= current; target job_zone <= current + 1; target MA employment >= 1000; target ma_ai_2025 > current ma_ai_2025 (null current counts as 0). Keep up to 10, sorted by similarity. Bridge skills = top 3 O*NET skills where target importance exceeds current most.
 - Following software's path: take the job's 2026 US GenAI %. t* = year software had that value (linear interpolation on `software_genai_us`); years_behind = 2026 - t*, rounded to 0.5, status `behind`. At or above software 2026 -> 0, `level`. Below software 2023 -> null, `not_started`. 2026 US THIN -> null, `too_few_ads`. A pattern in employer demand, not a forecast of jobs.
-- Lightcast organizer rules (docs: human-edge-studio/docs/lightcast-ai-context.md): Unclassified out of rankings, in totals; THIN rates are blank; rate changes in points; never "at risk".
+- Lightcast data rules: Unclassified out of rankings, in totals; THIN rates are blank; rate changes in points; never "at risk".
 - Join Lightcast/O*NET/AEI on ONET; OEWS on SOC_2018 = ONET[:7]; collapse ONET->SOC before attaching OEWS (no double counting). Lightcast `soc_2018` column is Excel-mangled for 11-xxxx codes: derive SOC from ONET[:7].
 
 ## API (server.py, Python stdlib only)

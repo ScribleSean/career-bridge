@@ -1,4 +1,4 @@
-"""Checks the built careerbridge.json against CONTRACT.md and the teammate's prototype.
+"""Checks the built careerbridge.json against CONTRACT.md and the reference prototype.
 
 Run:  python pipeline/build.py && python -m unittest tests/test_pipeline.py -v
 Stdlib only. Skips the reference comparison if reference_prototype.json is missing.

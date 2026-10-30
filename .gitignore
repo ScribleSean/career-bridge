@@ -5,3 +5,12 @@ data/
 __pycache__/
 .DS_Store
 site/
+
+# Agent files (local only)
+CLAUDE.md
+AGENTS.md
+.claude/
+.codex/
+HANDOFF*
+*.local.md
+.worktrees/
