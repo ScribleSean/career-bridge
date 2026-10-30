@@ -3,7 +3,7 @@
 Massachusetts career tool for the Human Edge Studio challenge (SG+I, Oct 2026). Public repo.
 
 ## Data
-- `data/` and `sgi_dataset/` are gitignored. Never commit Lightcast data or anything derived from it (`careerbridge.json`, `ma_growth.json`).
+- `data/` and `sgi_dataset/` are gitignored. Never commit Lightcast data or derived files (`careerbridge.json`, `ma_growth.json`). A few published headline aggregates (526,000; the 6.18% state rate) may stay in the public code: the challenge terms allow them (Sean, 2026-10-29).
 - Public layer: `pipeline/atlas.py` → `data/atlas.json` (BLS OEWS, O*NET 31.0, Anthropic Economic Index only). Private layer: `pipeline/build.py` → `data/careerbridge.json` (Lightcast). Shapes and rules: `CONTRACT.md`.
 - Lightcast leads. Exposure groups use Lightcast bands: index above 50 = high; MA ads at or above the 2025 state rate (6.18%) = employers asking; silent gap = under 1%.
 - Never say "at risk" or "automatable". Exposure is overlap, not job loss.
