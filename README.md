@@ -45,4 +45,27 @@ One region with its MassHire workforce board, three jobs, one quarter: about 100
 
 A working prototype. **All survey results in it are sample data**, made up to show how the totals would read; what you answer stays in your browser. Career Bridge is an independent student project and is not affiliated with MassHire, Lightcast or the Commonwealth of Massachusetts.
 
-<sub>Run it locally: `./build-site.sh`, then `python3 -m http.server 8090 --directory site`. The README clips are recorded from the real app with `node docs/media/record.mjs` (headless Chrome, no dependencies).</sub>
+## Run it locally
+
+You need Python 3.9+ with pandas, and the Human Edge Studio event dataset (BLS OEWS and Anthropic Economic Index extracts), which is not in this repo. Put it at `./sgi_dataset` or point `SGI_DATA` at it.
+
+```sh
+python3 -m venv .venv && . .venv/bin/activate
+pip install pandas
+python pipeline/atlas.py        # builds data/atlas.json and data/titles.json from open data
+./demo.sh                       # serves the app at http://localhost:8000
+```
+
+To build the static site instead: `./build-site.sh`, then `python3 -m http.server 8090 --directory site`.
+
+If the licensed Lightcast files are in the dataset folder, `./demo.sh` also runs `pipeline/build.py` to add the Lightcast overlay (`data/careerbridge.json`). The data shapes are in [`CONTRACT.md`](CONTRACT.md).
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening a PR:
+
+- Run `python -m unittest discover -s tests` and `node --test tests/`.
+- Load the app and open the overview, the survey, the results, a job and About with no console errors.
+- Don't commit anything under `data/` or `sgi_dataset/`. Lightcast data is licensed, and the static build refuses to include it.
+
+The README clips are recorded from the running app with `node docs/media/record.mjs` (headless Chrome, no dependencies).
