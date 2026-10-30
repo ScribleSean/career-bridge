@@ -26,7 +26,9 @@ OUT = REPO / "data"
 # Scenario defaults. A = share of Claude-exposed, handed-off work adopted by 2031; P = share of that adopted work that removes headcount.
 # These are illustrative assumptions, used when the analysis outputs were generated, not estimates from data.
 SCENARIOS = {"slow": {"A": 0.10, "P": 0.5}, "base": {"A": 0.25, "P": 0.5}, "fast": {"A": 0.50, "P": 0.5}}
-HORIZON = 6  # May 2025 -> May 2031
+OEWS_YEAR = 2025
+SCENARIO_YEAR = 2031
+HORIZON = SCENARIO_YEAR - OEWS_YEAR
 
 
 def nn(x, nd=2):
@@ -47,9 +49,9 @@ def build():
             "soc": soc, "title": r.title, "group": r.major_group,
             "us_jobs": int(r.emp2025), "ma_jobs": None if m is None else nn(m.EMPLOYMENT, 0),
             "us_wage": nn(r.wage2025, 0), "ma_wage": None if m is None else nn(m.A_MEDIAN, 0),
-            "g": nn(r.g * 100),          # % a year, 2019-2025 (US OEWS, winsorized)
-            "growth_pct": nn(r.get("cagr_19_25", float("nan")) * 100),  # uncapped US yearly change
-            "z": nn(r.z * 100, 1),       # Claude exposure percentile, 0-100
+            "g": nn(r.g * 100),
+            "growth_pct": nn(r.get("cagr_19_25", float("nan")) * 100),
+            "z": nn(r.z * 100, 1),
             "basis": r.z_basis, "auto": nn(r.auto_share * 100, 1), "tier": r.tier, "posture": p.get("posture"),
             "edu": p.get("education"), "prep": p.get("preparation"),
         })
@@ -64,7 +66,6 @@ def build():
             "timeline": json.loads(p["timeline"]),
         }
 
-    # Claude.ai usage, US, April and May 2026 (AEI June 2026 release)
     o = pd.read_csv(DATA / "anthropic/aei_other_metrics_long.csv", dtype={"NODE_EXTERNAL_ID": str})
     us = o[o.AREA == "US"]
     ov = us[us.CATEGORY_NAME == "overall"].pivot(index="METRIC_ID", columns="DATE_START", values="VALUE")
@@ -77,7 +78,7 @@ def build():
     }
     return {
         "meta": {"built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "horizon": HORIZON, "scenarios": SCENARIOS,
-                 "usage_period": "April and May 2026", "oews_year": 2025,
+                 "usage_period": "April and May 2026", "oews_year": OEWS_YEAR,
                  "sources": ["BLS OEWS, May 2019 to May 2025", "O*NET 31.0", "Anthropic Economic Index, June 2026 release (Claude.ai, US)"]},
         "occ": occ, "plans": plan, "usage": usage,
     }

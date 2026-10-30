@@ -26,6 +26,8 @@ SRC = Path(os.environ.get("OEWS_HISTORY", ROOT / "data" / "oews_history"))
 OUT = ROOT / "data" / "ma_growth.json"
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 SIMILAR_PTS = 5.0
+EMPLOYMENT_NOT_AVAILABLE = "**"
+SOC_2018_FULLY_ADOPTED = 2021
 
 
 def _col_index(ref):
@@ -64,10 +66,8 @@ def read_rows(path):
 
 
 def to_num(s):
-    try:
-        return float(str(s).replace(",", ""))
-    except ValueError:
-        return None  # "**", "#", "*" etc.
+    s = str(s).strip()
+    return None if s == EMPLOYMENT_NOT_AVAILABLE else float(s.replace(",", ""))
 
 
 def ma_rows(path):
@@ -112,7 +112,7 @@ def build():
     res = {}
     for soc in sorted(set().union(*years.values())):
         series = [[y, years[y][soc]] for y in sorted(years) if soc in years[y]]
-        start = next(((y, e) for y, e in series if y <= first + 2), None)  # allow for 2019-2021 code changes
+        start = next(((y, e) for y, e in series if y <= max(first, SOC_2018_FULLY_ADOPTED)), None)
         end = next(((y, e) for y, e in series if y == last), None)
         growth = vs = None
         status = "too_little_data"

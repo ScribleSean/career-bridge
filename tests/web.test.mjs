@@ -1,5 +1,3 @@
-// Run: node --test tests/
-// Job-title search, and the survey's totals (shares in range, small groups hidden).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {search, useTitles} from '../web/js/search.js';
@@ -56,7 +54,6 @@ import {renderOverview} from '../web/js/views/overview.js';
 import {renderSurvey, renderResults} from '../web/js/views/survey.js';
 import {renderBoard, QUADS} from '../web/js/views/board.js';
 
-// Only the DOM operations used by the renderers. No browser or data files needed.
 class Element {
   nodeType = 1;
   children = [];
@@ -78,7 +75,7 @@ function nodes(root, predicate) {
 function context(geo = 'MA', patch = {}, licensed = false) {
   const o = {soc: JOBS[0].soc, title: 'Example job', group: 'Example', ma_jobs: 1200, us_jobs: 900000,
     ma_wage: 60000, us_wage: 80000, g: 5, growth_pct: 12, z: 50, ...patch};
-  const model = makeModel({atlas: {meta: {scenarios: {}}, occ: [o], plans: {}}, cb: licensed ? {
+  const model = makeModel({atlas: {meta: {}, occ: [o], plans: {}}, cb: licensed ? {
     meta: {}, occ: [{soc: o.soc, exposure: 60, ma_ai_2025: .5, quadrant: QUADS[0], silent_gap: true}],
     strengths: {[o.soc]: [['Missing importance', null, 1], ['Missing difference', 4, null], ['Valid strength', 4, 1]]},
   } : null}, geo);
@@ -191,7 +188,7 @@ test('search folds accents in queries, official titles and alternate titles', ()
   for (const q of ['résumé writer', 'resume writer', 're\u0301sume\u0301 writer']) assert.equal(search(q, occs)[0].o.soc, '1');
   assert.equal(search('resume specialist', occs)[0].via, 'Résumé Specialist');
   for (const q of ['café', 'cafe', 'cafe\u0301']) assert.ok(search(q, occs).some((x) => x.o.soc === '3'));
-  assert.deepEqual(search('writ', occs).map((x) => x.o.soc), ['1']);  // partial words still match while typing
+  assert.deepEqual(search('writ', occs).map((x) => x.o.soc), ['1']);
   assert.doesNotThrow(() => search('*', [{soc: '9', title: '*'}]));
 });
 
@@ -263,7 +260,7 @@ test('failed storage keeps the form visible and success alone shows thank-you', 
     assert.equal(store.set('probe', 'value'), !fail);
     assert.equal(submit(worker()), !fail);
     const root = render(renderSurvey, context(), {job: JOBS[0].soc, as: 'worker'});
-    assert.ok(root.textContent.includes('Stored as-is in this browser until you choose “Clear my answers”.'));
+    assert.ok(root.textContent.includes('Your answers stay in this browser until you choose “Clear my answers”.'));
     const form = nodes(root, (n) => n.tag === 'form')[0];
     form.events.submit({preventDefault() {}, currentTarget: form});
     assert.equal(root.textContent.includes('Thank you'), !fail);

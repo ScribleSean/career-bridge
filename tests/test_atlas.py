@@ -11,7 +11,7 @@ from unittest.mock import patch
 try:
     import pandas as pd
     from pipeline import atlas
-except ImportError:  # the pipeline needs pandas; the data checks below don't
+except ImportError:
     pd = None
 from pathlib import Path
 

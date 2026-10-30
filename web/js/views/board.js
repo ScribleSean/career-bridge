@@ -1,16 +1,12 @@
-// Workforce-board view: jobs where exposure is high but employer demand for AI skills is low.
-// Needs the Lightcast file, so it appears only in the private build.
 import {h, fmt, src} from '../util.js';
 import {dataTable, sortRows} from '../table.js';
 
 export const QUADS = ['High exposure, low adoption', 'High exposure, high adoption', 'Lower exposure, high adoption', 'Lower exposure, low adoption', 'Too few MA job ads to measure'];
 const SILENT = 'Silent gap';
-// The deck's group names (slide 3), so the demo and the slides use the same words.
 const QLABEL = {[SILENT]: 'Silent gap', [QUADS[0]]: 'Broad gap', [QUADS[1]]: 'Employers ask', [QUADS[2]]: 'Lower overlap, higher signal',
   [QUADS[3]]: 'Lower overlap, low signal', [QUADS[4]]: 'Too few job ads to tell'};
 const QCLASS = {[QUADS[0]]: 'gap', [QUADS[1]]: 'ai', [QUADS[2]]: 'ai', [QUADS[3]]: 'neutral', [QUADS[4]]: 'neutral'};
 
-/** Worker-weighted median of job median pay (how slide 3's pay figures are computed). */
 function medianPay(list) {
   const xs = list.filter((o) => o.wage).sort((a, b) => a.wage - b.wage);
   const half = xs.reduce((s, o) => s + o.jobs, 0) / 2;
@@ -40,7 +36,6 @@ export function renderBoard(root, ctx, params) {
     return {n, share: Math.round(100 * n / allWorkers), pay: medianPay(list), g: growth[k]};
   };
   const line = (f) => [h('span', {}, `${f.share}% of workers · median ${fmt.usd(f.pay)}`), f.g == null ? null : h('span', {}, `Jobs 2019–25: ${fmt.signed(f.g)}`)];
-  // Slide 3 as a grid: rows are AI overlap, columns are how many MA job ads ask for AI. A cell filters the table.
   const cell = (k, tone) => {
     const f = facts(k), on = quad === k;
     const sil = k === QUADS[0] ? facts(SILENT) : null;
@@ -48,7 +43,7 @@ export function renderBoard(root, ctx, params) {
       h('button', {type: 'button', class: 'qmain', 'aria-pressed': String(on), onclick: () => set({quadrant: k})},
         h('span', {class: 'qn'}, QLABEL[k]), h('span', {class: 'qv'}, short(f.n)), h('span', {class: 'qf'}, line(f))),
       sil ? h('button', {type: 'button', class: 'qsil', 'aria-pressed': String(quad === SILENT), onclick: () => set({quadrant: SILENT})},
-        h('span', {}, `Includes the silent gap (<${cut}% of ads)`), h('span', {}, `${short(sil.n)} · ${sil.share}% · median ${fmt.usd(sil.pay)}` + (sil.g == null ? '' : ` · jobs ${fmt.signed(sil.g)}`))) : null);
+        h('span', {}, `Includes the silent gap (under ${cut}% of ads)`), h('span', {}, `${short(sil.n)} · ${sil.share}% · median ${fmt.usd(sil.pay)}` + (sil.g == null ? '' : ` · jobs ${fmt.signed(sil.g)}`))) : null);
   };
   const grid = h('div', {class: 'qgrid', role: 'group', 'aria-label': 'Four groups of Massachusetts workers'},
     h('span', {class: 'qcol', style: 'grid-area:c1'}, `Under ${stateRate}% of MA job ads ask for AI`),
@@ -64,7 +59,7 @@ export function renderBoard(root, ctx, params) {
     {key: 'ads', label: 'MA ads asking for AI', num: true, src: 'lc', value: (o) => o.lc.ma_ai_2025, cell: (o) => fmt.pct(o.lc.ma_ai_2025)},
     {key: 'quad', label: 'Where it stands', opt: true, value: (o) => QLABEL[o.lc.quadrant] + (o.lc.silent_gap ? ' · silent gap' : '')},
     {key: 'wage', label: 'Median pay', num: true, opt: true, src: 'oews', value: (o) => o.wage, cell: (o) => fmt.usd(o.wage)},
-    {key: 'claude', label: 'Claude use (0–100)', num: true, opt: true, src: 'aei', value: (o) => o.z, cell: (o) => o.z == null ? 'Not enough data' : Math.round(o.z)},
+    {key: 'claude', label: 'AI use (0–100)', num: true, opt: true, src: 'aei', value: (o) => o.z, cell: (o) => o.z == null ? 'Not enough data' : Math.round(o.z)},
   ];
   const col = cols.find((c) => c.key === sort.key) || cols[1];
   root.replaceChildren(h('div', {class: 'boardview'},

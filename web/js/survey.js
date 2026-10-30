@@ -1,9 +1,5 @@
-// The AI-at-work survey: a short, repeatable question set for three silent-gap jobs, answered by workers and by
-// employers, published only as totals. Built on O*NET work activities so results line up with federal and Lightcast data.
-// Demo: sample responses are generated here and labeled as samples; answers you submit stay in this browser.
 import {store} from './util.js';
 
-/* ---------- the three pilot jobs ---------- */
 export const JOBS = [
   {soc: '43-6014', short: 'Administrative assistants'},
   {soc: '43-4051', short: 'Customer service representatives'},
@@ -11,7 +7,6 @@ export const JOBS = [
 ];
 export const jobShort = (soc) => JOBS.find((j) => j.soc === soc)?.short || soc;
 
-/* ---------- work activities: plain labels over O*NET 31.0, plus three AI activities O*NET doesn't track ---------- */
 export const ACTS = [
   ['relationships', 'Building relationships', 'Establishing and Maintaining Interpersonal Relationships'],
   ['caring', 'Caring for people', 'Assisting and Caring for Others'],
@@ -36,7 +31,6 @@ export const ACT = Object.fromEntries(ACTS.map((a) => [a.id, a]));
 const BY_ONET = Object.fromEntries(ACTS.filter((a) => a.onet).map((a) => [a.onet, a.id]));
 const AI_ACTS = ['ai-assist', 'ai-check', 'automation'];
 
-/** The activities asked about for a job: the ones O*NET lists for it, then the three AI activities. */
 export function actsFor(soc, plans) {
   const p = plans?.[soc];
   const ids = [...new Set([...(p?.lean || []), ...(p?.use || [])].map((n) => BY_ONET[n]).filter(Boolean))];
@@ -45,7 +39,6 @@ export function actsFor(soc, plans) {
 
 export const REGIONS = ['Boston', 'Metro North', 'Metro South/West', 'Northeast', 'Southeast', 'Central', 'Pioneer Valley', 'Berkshire', 'Cape and Islands'];
 
-/* ---------- the questions ---------- */
 export const AI_LEVELS = [['no', 'Not at all'], ['some', 'Sometimes'], ['often', 'Most of the time']];
 export const WORKER_Q = {
   tools: {q: 'Which AI tools, if any, do you use for work?', multi: true, opts: [['none', 'None'], ['chat', 'A chat assistant (ChatGPT, Claude, Copilot or similar)'], ['builtin', 'AI built into software we already use'], ['other', 'Something else']]},
@@ -59,13 +52,11 @@ export const EMPLOYER_Q = {
   size: {q: 'How many people work at your organization?', opts: [['s', 'Fewer than 50'], ['m', '50 to 499'], ['l', '500 or more']]},
 };
 
-/* ---------- sample responses (deterministic; every one labeled "sample") ---------- */
 function rng(seed) {
   let a = 0;
   for (const ch of seed) a = (a * 31 + ch.charCodeAt(0)) | 0;
   return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
-// How much each pilot job leans on AI in the samples. Made up to show how results read, not estimates.
 const AI_LEAN = {'43-6014': 0.55, '43-4051': 0.45, '41-2031': 0.25};
 const pickW = (r, pairs) => { let x = r() * pairs.reduce((s, p) => s + p[1], 0); for (const [k, w] of pairs) { x -= w; if (x <= 0) return k; } return pairs[0][0]; };
 
@@ -85,7 +76,7 @@ function samples(soc, plans) {
     const tools = usesAI ? [r() < 0.7 ? 'chat' : null, r() < 0.45 ? 'builtin' : null].filter(Boolean) : ['none'];
     out.push({side: 'worker', soc, sample: true, region: pickW(r, REGIONS.map((x, j) => [x, j < 6 ? 3 : 1])), acts: a,
       tools: tools.length ? tools : ['chat'], trained: pickW(r, [['yes', .18], ['self', usesAI ? .5 : .1], ['no', .5]]),
-      help: [r() < (usesAI ? .55 : .3) ? 'tools' : null, r() < (usesAI ? .45 : .15) ? 'check' : null, r() < .3 ? 'people' : null].filter(Boolean).concat([]),
+      help: [r() < (usesAI ? .55 : .3) ? 'tools' : null, r() < (usesAI ? .45 : .15) ? 'check' : null, r() < .3 ? 'people' : null].filter(Boolean),
       years: pickW(r, [['lt1', .2], ['1to5', .45], ['gt5', .35]])});
   }
   for (let i = 0; i < 26; i++) {
@@ -101,7 +92,6 @@ function samples(soc, plans) {
   return out;
 }
 
-/* ---------- storage ---------- */
 const KEY = 'cb-survey-v1';
 const record = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const valid = (v) => record(v) && JOBS.some((j) => j.soc === v.soc) && REGIONS.includes(v.region) &&
@@ -123,7 +113,6 @@ export function responses(soc, plans, source = 'sample') {
   return source === 'mine' ? mine().filter((x) => x.soc === soc) : [...cache[soc]];
 }
 
-/* ---------- totals: nothing is shown for a group under MIN_CELL responses ---------- */
 export const MIN_CELL = 10;
 const share = (n, d) => (d ? n / d : null);
 export function totals(soc, plans, region = '', source = 'sample') {

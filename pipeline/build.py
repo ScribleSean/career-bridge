@@ -25,17 +25,17 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parent  # repo root
+REPO = HERE.parent
 DATA = Path(os.environ.get("SGI_DATA", REPO / "sgi_dataset"))
 OUT = HERE.parent / "data" / "careerbridge.json"
 
-EXPOSURE_CUT = 50.0          # contract: exposure > 50 = high (Lightcast AI_EXPOSURE_BAND Medium-high or High)
-SILENT_CUT = 1.0             # contract: silent gap = high exposure and MA ads asking for AI < 1% (2025, not THIN)
+EXPOSURE_CUT = 50.0
+SILENT_CUT = 1.0
 YEAR = 2025
 TREND_YEARS = [2023, 2024, 2025, 2026]
 BACHELORS_PLUS = range(6, 13)  # O*NET RL categories 6-12: bachelor's .. post-doctoral
 PATH_MIN_SIM, PATH_MIN_EMP, PATH_MAX = 0.70, 1000, 10
-SIM_METHOD = os.environ.get("CB_SIM", "zscore")  # "zscore" or "row"; see cosine_matrix
+SIM_METHOD = os.environ.get("CB_SIM", "zscore")
 LABELS = {
     (True, False): "High exposure, low adoption",
     (True, True): "High exposure, high adoption",
@@ -43,7 +43,7 @@ LABELS = {
     (False, False): "Lower exposure, low adoption",
 }
 THIN_LABEL = "Too few MA job ads to measure"
-SOFTWARE_ONET = "15-1252.00"  # Software Developers: the reference path for "years behind software"
+SOFTWARE_ONET = "15-1252.00"
 
 
 def confidence(postings):
@@ -61,7 +61,6 @@ def num(x, nd=2):
     return None if x is None or pd.isna(x) else round(float(x), nd)
 
 
-# ---------------------------------------------------------------- load
 def load():
     d = {}
     d["prof"] = pd.read_csv(DATA / "lightcast/lc_occupation_ai_profile.csv", dtype={"onet": str})
@@ -80,7 +79,6 @@ def load():
     return d
 
 
-# ---------------------------------------------------------------- crosswalk
 def build_crosswalk(prof, onet_occ, oews_socs):
     """O*NET code -> OEWS SOC. Uses ONET[:7], Lightcast soc_5, then ONET[:6]+'0'."""
     soc5 = prof.drop_duplicates("onet").set_index("onet").soc_5.to_dict()
@@ -100,7 +98,6 @@ def state_rate(prof):
     return float((y.ma_job_postings * y.ma_pct_postings_ai_skills).sum() / y.ma_job_postings.sum())
 
 
-# ---------------------------------------------------------------- Lightcast per SOC
 def wrate(g, post_col, pct_col):
     m = g[pct_col].notna() & (g[post_col] > 0)
     if not m.any():
@@ -126,12 +123,11 @@ def lightcast_by_soc(prof, xw):
             "us_genai": wrate(g, "us_job_postings", "us_pct_postings_genai_skills"),
         })
     by_year = pd.DataFrame(rows)
-    for geo in ("ma", "us"):  # THIN rates are blank
+    for geo in ("ma", "us"):
         thin = by_year[f"{geo}_conf"] == "THIN"
         cols = [c for c in (f"{geo}_ai", f"{geo}_genai") if c in by_year]
         by_year.loc[thin, cols] = np.nan
 
-    # exposure is constant across years; weight O*NET codes by 2025 US postings (as Lightcast does)
     e = p[p.year == YEAR].dropna(subset=["ai_exposure_index"])
     exposure = e.groupby("soc").apply(
         lambda g: np.average(g.ai_exposure_index, weights=g.us_job_postings.clip(lower=1)),
@@ -139,7 +135,6 @@ def lightcast_by_soc(prof, xw):
     return by_year, exposure
 
 
-# ---------------------------------------------------------------- O*NET per SOC
 def onet_by_soc(onet_occ, edu, xw):
     o = onet_occ.assign(soc=onet_occ.ONET.map(xw)).dropna(subset=["soc"])
     job_zone = o.groupby("soc").JOB_ZONE.mean().round()
@@ -159,10 +154,9 @@ def skill_vectors(onet_skills, xw):
     return vec.dropna()
 
 
-# ---------------------------------------------------------------- AEI per SOC
 def aei_share(aei_occ, xw):
     us = aei_occ[aei_occ.AREA == "US"]
-    per_onet = us.groupby("ONET").AEI_PCT.mean()  # Apr-May average
+    per_onet = us.groupby("ONET").AEI_PCT.mean()
     return per_onet.groupby(per_onet.index.map(xw)).sum()
 
 
@@ -176,7 +170,6 @@ def aei_tasks(aei_long, tasks, xw):
             for soc, g in j.groupby("soc")}
 
 
-# ---------------------------------------------------------------- Lightcast skills
 def top_skills(lc_skills, xw, ma_conf):
     """2025 top skills per SOC: MA if the SOC's MA postings are not THIN, else US.
     Multi-O*NET SOCs: postings with skill summed over member codes / SOC postings."""
@@ -199,7 +192,6 @@ def top_skills(lc_skills, xw, ma_conf):
     return out
 
 
-# ---------------------------------------------------------------- strengths + paths
 def strengths(vec, emp):
     w = emp.reindex(vec.index).fillna(0)
     mean = (vec.mul(w, axis=0).sum() / w.sum())
@@ -219,8 +211,10 @@ def cosine_matrix(vec):
     prototype's choice, which scores most pairs high, e.g. medical secretary ~ IT support 0.79)."""
     if SIM_METHOD == "row":
         z = vec.sub(vec.mean(axis=1), axis=0)
-    else:
+    elif SIM_METHOD == "zscore":
         z = (vec - vec.mean()) / vec.std(ddof=0).replace(0, 1)
+    else:
+        raise ValueError(f"CB_SIM must be zscore or row, not {SIM_METHOD!r}")
     x = z.values / np.linalg.norm(z.values, axis=1, keepdims=True)
     with np.errstate(all="ignore"):  # spurious Accelerate BLAS warnings on macOS
         return pd.DataFrame(x @ x.T, index=vec.index, columns=vec.index)
@@ -249,7 +243,6 @@ def paths(occ, vec):
     return out
 
 
-# ---------------------------------------------------------------- software's path
 def software_curve(prof):
     """US % of Software Developers postings asking for GenAI skills, by year."""
     s = prof[prof.onet == SOFTWARE_ONET].sort_values("year")
@@ -260,19 +253,20 @@ def software_curve(prof):
 def years_behind(us_2026, curve):
     """Shared method: the year t* when software had this job's 2026 US GenAI %, by linear
     interpolation; years_behind = 2026 - t*, rounded to 0.5. Returns (value, status)."""
-    if us_2026 is None or pd.isna(us_2026):
-        return None, "too_few_ads"
     yrs = [c[0] for c in curve]
     vals = [c[1] for c in curve]
+    if any(b <= a for a, b in zip(vals, vals[1:])):
+        raise ValueError(f"software's GenAI curve must rise every year to interpolate: {curve}")
+    if us_2026 is None or pd.isna(us_2026):
+        return None, "too_few_ads"
     if us_2026 >= vals[-1]:
         return 0.0, "level"
     if us_2026 < vals[0]:
         return None, "not_started"
-    t = float(np.interp(us_2026, vals, yrs))  # software's curve rises every year
+    t = float(np.interp(us_2026, vals, yrs))
     return round((yrs[-1] - t) * 2) / 2, "behind"
 
 
-# ---------------------------------------------------------------- assemble
 def quadrant(exposure, ma_ai, conf, rate):
     if conf == "THIN" or ma_ai is None or pd.isna(ma_ai):
         return THIN_LABEL
@@ -363,7 +357,6 @@ def build():
         rec["ma_growth_status"] = g.get("status", "too_little_data")
         out_occ.append(rec)
 
-    # MA job change 2019 -> 2025 for each group (and the silent gap), summed over jobs with both years.
     sums = {}
     for rec in out_occ:
         series = dict((y, v) for y, v in gocc.get(rec["soc"], {}).get("emp", []))
@@ -377,7 +370,7 @@ def build():
             "group_growth": group_growth,
             "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "state_rate_2025": rate,
-            "exposure_cut": EXPOSURE_CUT,      # Lightcast band: Medium-high starts at 50
+            "exposure_cut": EXPOSURE_CUT,
             "silent_cut": SILENT_CUT,
             "software_genai_us": soft,
             "ma_growth": growth.get("meta", {}),
@@ -407,7 +400,7 @@ def load_growth():
     path = HERE.parent / "data" / "ma_growth.json"
     if not path.exists():
         try:
-            import growth as growth_mod  # pipeline/growth.py
+            import growth as growth_mod
             if list(growth_mod.SRC.glob("state_*.xlsx")):
                 return growth_mod.build()
         except Exception as e:  # missing history files should not stop the main build

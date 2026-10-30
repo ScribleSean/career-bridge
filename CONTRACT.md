@@ -1,8 +1,10 @@
 # Career Bridge: data contract
 
-The pipeline writes `data/careerbridge.json`. The server reads it and serves the API. The web app only talks to the API.
-`data/` is gitignored: it holds Lightcast-derived numbers and this repo is public.
-`data/reference_prototype.json` (optional, not in the repo) is earlier prototype data in the same shape, used as a reference by `tests/test_pipeline.py`.
+The pipeline writes `data/careerbridge.json`. The server reads it and serves the API. The web app does not call the API. It reads `atlas.json` and `titles.json` directly, plus `careerbridge.json` when the page has a `<meta name="cb-lightcast">` tag. The server serves `atlas.json` and `titles.json` from `data/`, and `careerbridge.json` from the data file it loaded.
+
+`data/` is gitignored because it holds Lightcast-derived numbers and this repo is public.
+
+`tests/test_pipeline.py` compares against `data/reference_prototype.json` when that file exists. It is earlier prototype data in the same shape and is not in the repo.
 
 ## careerbridge.json
 ```
@@ -33,24 +35,31 @@ The pipeline writes `data/careerbridge.json`. The server reads it and serves the
 ```
 
 ## Rules
-- Quadrants: exposure > 50 = high (Lightcast AI_EXPOSURE_BAND Medium-high or High; the old 55.7 median is not used); ma_ai_2025 >= 6.18 (2025 MA state rate) = high demand. Labels exactly:
-  `High exposure, low adoption`, `High exposure, high adoption`, `Lower exposure, high adoption`, `Lower exposure, low adoption`, `Too few MA job ads to measure` (MA THIN or null rate).
-- Silent gap: exposure > 50 AND ma_ai_2025 < 1.0, MA not THIN and rate not null. Always a subset of `High exposure, low adoption`.
-- Paths (next moves): cosine similarity >= 0.70 on O*NET skill importance vectors; target MA median wage >= current; target job_zone <= current + 1; target MA employment >= 1000; target ma_ai_2025 > current ma_ai_2025 (null current counts as 0). Keep up to 10, sorted by similarity. Bridge skills = top 3 O*NET skills where target importance exceeds current most.
-- Following software's path: take the job's 2026 US GenAI %. t* = year software had that value (linear interpolation on `software_genai_us`); years_behind = 2026 - t*, rounded to 0.5, status `behind`. At or above software 2026 -> 0, `level`. Below software 2023 -> null, `not_started`. 2026 US THIN -> null, `too_few_ads`. A pattern in employer demand, not a forecast of jobs.
-- Lightcast data rules: Unclassified out of rankings, in totals; THIN rates are blank; rate changes in points; never "at risk".
-- Join Lightcast/O*NET/AEI on ONET; OEWS on SOC_2018 = ONET[:7]; collapse ONET->SOC before attaching OEWS (no double counting). Lightcast `soc_2018` column is Excel-mangled for 11-xxxx codes: derive SOC from ONET[:7].
+- **Quadrants.** Exposure above 50 counts as high. That is where Lightcast's `AI_EXPOSURE_BAND` Medium-high and High bands start. (`reference_prototype.json` used the 55.7 median instead.) A `ma_ai_2025` at or above 6.18, the 2025 MA state rate, counts as high demand. Use these labels exactly:
+  `High exposure, low adoption`, `High exposure, high adoption`, `Lower exposure, high adoption`, `Lower exposure, low adoption`, and `Too few MA job ads to measure` (MA is THIN or the rate is null).
+- **Silent gap.** A job is in the silent gap when exposure is above 50 and `ma_ai_2025` is below 1.0, MA is not THIN, and the rate is not null. Every silent-gap job is also in `High exposure, low adoption`.
+- **Paths (next moves).** A target job qualifies when all of these hold:
+  - The cosine similarity of the two jobs' O*NET skill importance vectors is 0.70 or more.
+  - The target's MA median wage is at least the current job's.
+  - The target's `job_zone` is at most the current job's plus 1.
+  - The target's MA employment is at least 1,000.
+  - The target's `ma_ai_2025` is above the current job's. A null current rate counts as 0.
+
+  Keep up to 10 targets, sorted by similarity. The bridge skills are the 3 O*NET skills where the target's importance exceeds the current job's by the most.
+- **Following software's path.** Take the job's 2026 US GenAI share. Find the year t* when software had that share, by linear interpolation on `software_genai_us`. Then `years_behind_software` is 2026 minus t*, rounded to the nearest 0.5, and the status is `behind`. If the job is at or above software's 2026 share, the value is 0 and the status is `level`. If it is below software's 2023 share, the value is null and the status is `not_started`. If its 2026 US rate is THIN, the value is null and the status is `too_few_ads`. The measure shows a pattern in employer demand, not a forecast of jobs.
+- **Lightcast data rules.** Leave Unclassified out of rankings but keep it in totals. Show THIN rates as blank. Report rate changes in percentage points. Never describe a job as "at risk".
+- **Joins.** Join Lightcast, O*NET and AEI on the O*NET code (`ONET`). Join OEWS on `SOC_2018`, which is `ONET[:7]`. Collapse O*NET codes to SOC before attaching OEWS, so no job is counted twice. Excel garbled the Lightcast `soc_2018` column for 11-xxxx codes, so derive SOC from `ONET[:7]` instead.
 
 ## API (server.py, Python stdlib only)
-- `GET /api/meta` -> meta + counts
-- `GET /api/occupations?q=` -> [{soc,title,major_group,ma_employment,exposure,ma_ai_2025,quadrant,silent_gap}] (search; aliases like rn, admin, cna)
-- `GET /api/occupations/{soc}` -> occ + trend + genai + tasks + skills + strengths + paths (each path expanded with target occ summary)
-- `GET /api/board?quadrant=&family=&q=&sort=&dir=` -> rows (incl. years_behind_software, software_path_status; sort=years_behind_software puts not_started after behind, too_few_ads last) + summary {gap_workers, gap_share, gap_count, silent_workers, silent_share, silent_count, state_rate}; quadrant=`Silent gap` filters to silent_gap rows
-- Static files from `web/`. Data file path: env CB_DATA, else data/careerbridge.json, else data/reference_prototype.json (with a warning in /api/meta).
+- `GET /api/meta` returns `meta` plus `counts`, `quadrant_counts`, `families`, `aliases`, `using_reference`, `lite` and `data_file`. It adds `warning` when the server uses the reference data.
+- `GET /api/occupations?q=` searches job titles and returns `[{soc, title, major_group, ma_employment, exposure, ma_ai_2025, quadrant, silent_gap}]`. Search expands aliases such as `rn`, `admin` and `cna`. `limit` sets the number of results (1 to 50, default 10).
+- `GET /api/occupations/{soc}` returns `occ`, `trend`, `genai`, `growth`, `tasks`, `skills`, `strengths` and `paths` for one job. Each path includes a summary of the target job. An unknown SOC returns 404.
+- `GET /api/board?quadrant=&family=&q=&sort=&dir=` returns `rows` and `summary`. Rows include `years_behind_software` and `software_path_status`. With `sort=years_behind_software`, `not_started` rows come after `behind` rows in ascending order and before them in descending order. `too_few_ads` rows always come last. `summary` holds `gap_workers`, `gap_share`, `gap_count`, `silent_workers`, `silent_share`, `silent_count` and `state_rate`. `quadrant=Silent gap` returns only silent-gap rows.
+- The server serves static files from `web/`. It reads the data file from `CB_DATA` if set, else `data/careerbridge.json`, else `data/reference_prototype.json`, and in the last case adds a warning to `/api/meta`. If the file it picks does not exist, it sets `lite` and serves only the open-data app.
 
 
 ## atlas.json (open data, `pipeline/atlas.py`)
-Built from BLS OEWS, O*NET and the Anthropic Economic Index only, so it can be hosted publicly. The page reads it directly; `careerbridge.json` is an optional overlay joined on `soc`.
+`pipeline/atlas.py` builds it from BLS OEWS, O*NET and the Anthropic Economic Index only, so it can be hosted publicly. The page reads it directly. `careerbridge.json` is an optional overlay that the page joins on `soc`.
 ```
 { "meta":  {"built_at", "horizon": 6, "scenarios": {"slow"|"base"|"fast": {"A", "P"}}, "usage_period", "oews_year", "sources": [...]},
   "occ":    [{"soc", "title", "group", "us_jobs", "ma_jobs"|null, "us_wage", "ma_wage"|null,
@@ -63,4 +72,4 @@ Built from BLS OEWS, O*NET and the Anthropic Economic Index only, so it can be h
   "plans":  {soc: {"why", "lean": [activity], "use": [activity], "moves": [{"soc", "sim", "loose", "skills": [..]}], "timeline": [{"when", "text"}]}},
   "usage":  {"use_case": [{"name", "apr", "may"}], "automation": {"apr", "may"}, "topics": [{"name", "apr", "may"}]} }
 ```
-`titles.json` is `[[reported job title, soc], ...]` for search. Scenario rule: `jobs2031 = jobs x (1 + g/100)^6 x (1 - A x P x auto/100 x z/100)`.
+Search uses `titles.json`, a list of `[reported job title, soc]` pairs. The scenario rule is `jobs2031 = jobs x (1 + g/100)^6 x (1 - A x P x auto/100 x z/100)`.

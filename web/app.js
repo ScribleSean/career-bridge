@@ -1,6 +1,3 @@
-// Career Bridge shell: loads data, owns the shared state (place), routes, and runs the search box.
-//   #/   overview     #/survey?job=&as=worker|employer   the survey     #/results?job=&region=   totals
-//   #/job/<soc>   one job (for career counselors)     #/board   workforce board (private build)     #/about
 import {$, h, store, announce, loading, errorBox, reduceMotion, parseHash} from './js/util.js';
 import {loadData, makeModel} from './js/data.js';
 import {loadTitles, search} from './js/search.js';
@@ -10,21 +7,19 @@ import {renderAbout} from './js/views/about.js';
 import {renderOverview} from './js/views/overview.js';
 import {renderSurvey, renderResults} from './js/views/survey.js';
 
-const DEFAULT_SOC = '43-6014';  // administrative assistants, the first survey job
+const DEFAULT_SOC = '43-6014';
 const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'],
   ['13-2011', 'Accountant'], ['29-1141', 'Registered nurse'], ['15-1252', 'Software developer'], ['11-2021', 'Marketing manager'], ['47-2111', 'Electrician']];
 
 let data = null, model = null;
 const state = {geo: store.get('cb-geo') === 'US' ? 'US' : 'MA'};
-const ctx = {state, selected: null,
+const ctx = {state,
   get model() { return model; },
   hrefJob: (soc) => hashFor('job', {}, soc),
   go: (view, params = {}, soc) => { location.hash = hashFor(view, params, soc); }};
 
-/* ---------- routing ---------- */
 function hashFor(view, params = {}, soc = '') {
-  const p = {...params};
-  const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== '' && v != null)).toString();
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null)).toString();
   return `#/${view}${view === 'job' && soc ? '/' + encodeURIComponent(soc) : ''}${qs ? '?' + qs : ''}`;
 }
 let lastKey = null;
@@ -36,7 +31,7 @@ function route() {
   if (r.view === 'job' && !r.soc) { history.replaceState(null, '', hashFor('job', {}, model.bySoc.has(lastSoc) ? lastSoc : DEFAULT_SOC)); return route(); }
   if (r.view === 'board' && !model.full) { history.replaceState(null, '', '#/'); return route(); }
   drawNav(r);
-  document.querySelector('.find').hidden = r.view !== 'job';  // job search only where it's used
+  document.querySelector('.find').hidden = r.view !== 'job';
   const view = $('view');
   const activeId = document.activeElement && view.contains(document.activeElement) ? document.activeElement.id : '';
   let key = r.view;
@@ -47,7 +42,7 @@ function route() {
       document.title = 'Job not found · Career Bridge';
       return;
     }
-    lastSoc = o.soc; ctx.selected = o.soc; store.set('cb-last', o.soc); key = 'job:' + o.soc;
+    lastSoc = o.soc; store.set('cb-last', o.soc); key = 'job:' + o.soc;
     if (document.activeElement !== $('q')) $('q').value = o.title;
     renderJob(view, ctx, o);
     document.title = `${o.title} · Career Bridge`;
@@ -60,7 +55,7 @@ function route() {
     lastKey = key;
     const head = $('occ-title') || $('view-title');
     if (head) { head.focus({preventScroll: true}); head.scrollIntoView({block: 'start', behavior: reduceMotion() ? 'auto' : 'smooth'}); }
-  } else if (activeId && $(activeId)) $(activeId).focus({preventScroll: true});  // same page re-rendered: keep focus on the control
+  } else if (activeId && $(activeId)) $(activeId).focus({preventScroll: true});
 }
 
 function drawNav(r) {
@@ -68,14 +63,12 @@ function drawNav(r) {
   $('nav').replaceChildren(...items.map(([k, label, href]) => h('a', {href, 'aria-current': k === r.view ? 'page' : null}, label)));
 }
 
-/* ---------- place ---------- */
 function drawGeo() {
   $('geo').replaceChildren(...[['MA', 'Massachusetts'], ['US', 'United States']].map(([k, label]) => h('button', {type: 'button', class: 'seg', 'aria-pressed': String(state.geo === k), onclick: () => {
     if (state.geo === k) return;
     state.geo = k; store.set('cb-geo', k); model = makeModel(data, k); drawGeo(); drawExamples(); route(); announce(`Showing numbers for ${label}.`);
   }}, label)));
 }
-/* ---------- search ---------- */
 const q = $('q'), res = $('results');
 let hits = [], active = -1, timer = null;
 function drawResults() {
@@ -105,13 +98,12 @@ function drawExamples() {
     .map(([soc, name]) => h('button', {class: 'chip', type: 'button', onclick: () => pick(soc)}, name)));
 }
 
-/* ---------- start ---------- */
 (async function start() {
   const view = $('view');
   view.replaceChildren(loading('Loading jobs…'));
   try { data = await loadData(); }
   catch (e) {
-    view.replaceChildren(errorBox('Couldn’t load the data. Build it with: python pipeline/atlas.py, then start the app with: python server.py'));
+    view.replaceChildren(errorBox('Couldn’t load the data. Run python pipeline/atlas.py, then python server.py.'));
     return;
   }
   model = makeModel(data, state.geo);

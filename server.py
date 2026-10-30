@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(HERE, "web")
+mimetypes.add_type("text/javascript", ".js")
 
 GAP = "High exposure, low adoption"
 HIHI = "High exposure, high adoption"
@@ -25,11 +26,11 @@ LOHI = "Lower exposure, high adoption"
 LOLO = "Lower exposure, low adoption"
 THIN = "Too few MA job ads to measure"
 QUADRANTS = [GAP, HIHI, LOHI, LOLO, THIN]
-SILENT = "Silent gap"  # board filter: subset of GAP where under 1% of MA ads ask for AI
+SILENT = "Silent gap"
 
 DEFAULT_META = {
     "state_rate_2025": 6.18,
-    "exposure_cut": 50.0,   # Lightcast AI_EXPOSURE_BAND: Medium-high starts at 50
+    "exposure_cut": 50.0,
     "silent_cut": 1.0,
     "exposure_min": 31.5,
     "exposure_max": 82.8,
@@ -41,7 +42,6 @@ DEFAULT_META = {
     ],
 }
 
-# Whole-word aliases expanded before matching titles.
 ALIASES = {
     "rn": "registered nurses",
     "admin": "administrative",
@@ -86,7 +86,7 @@ class Store:
     """Loads the data once and keeps indexes for search and board queries."""
 
     def __init__(self, path, using_reference=False):
-        self.lite = not os.path.exists(path)  # no Lightcast file: serve the open-data app only
+        self.lite = not os.path.exists(path)
         d = {}
         if not self.lite:
             with open(path, encoding="utf-8") as f:
@@ -104,7 +104,7 @@ class Store:
         self.paths = d.get("paths", {})
         meta = dict(DEFAULT_META)
         meta.update(d.get("meta") or {})
-        for o in self.occ:  # older data files lack the field: derive it with the contract rule
+        for o in self.occ:
             if "silent_gap" not in o:
                 o["silent_gap"] = bool(o.get("ma_confidence") != "THIN" and o.get("ma_ai_2025") is not None
                                        and (o.get("exposure") or 0) > meta["exposure_cut"]
@@ -116,7 +116,6 @@ class Store:
             meta["exposure_max"] = max(DEFAULT_META["exposure_max"], max(exps))
         self.meta = meta
         self.families = sorted({o.get("major_group") or "" for o in self.occ} - {""})
-        # Search index: largest jobs first.
         self.ranked = sorted(self.occ, key=lambda o: -(o.get("ma_employment") or 0))
         self.lower_titles = {o["soc"]: fold(o.get("title")) for o in self.occ}
         self.summary = self._board_summary()
@@ -158,7 +157,6 @@ class Store:
         for w in words:
             if w in title:
                 continue
-            # Light plural/singular tolerance ("nurse" -> "nurses", "clerks" -> "clerk").
             if len(w) > 4 and w[:-1] in title:
                 continue
             return False
@@ -178,8 +176,6 @@ class Store:
             title = self.lower_titles[o["soc"]]
             if not self._match(title, words):
                 continue
-            # Rank: words found before any "except ..." clause and at the start of a word
-            # rank higher; ties keep MA employment order.
             head = title.split(" except ")[0]
             score = 0
             for w in words:
@@ -247,10 +243,12 @@ class Store:
             rows.append(o)
 
         def val(o):
-            # "Not started" sorts as furthest behind software; "too few ads" stays blank (last).
-            if sort == "years_behind_software" and o.get("software_path_status") == "not_started":
-                return 99.0
-            return o.get(sort)
+            v = o.get(sort)
+            if sort != "years_behind_software":
+                return v
+            if o.get("software_path_status") == "not_started":
+                return (1, 0)
+            return None if v is None else (0, v)
 
         def key(o):
             v = val(o)
@@ -259,7 +257,7 @@ class Store:
         present = [o for o in rows if val(o) is not None]
         missing = [o for o in rows if val(o) is None]
         present.sort(key=key, reverse=(direction == "desc"))
-        rows = present + missing  # nulls always last
+        rows = present + missing
         return {
             "rows": [self.summarize(o, BOARD_FIELDS) for o in rows],
             "count": len(rows),
@@ -349,7 +347,6 @@ def make_handler(store):
         def _static(self, path):
             if path in ("", "/"):
                 path = "/index.html"
-            # The page reads these JSON files directly; they live in data/ (gitignored), not web/.
             if path == "/careerbridge.json":
                 full = os.path.realpath(store.path)
                 ok = os.path.isfile(full)
@@ -360,10 +357,8 @@ def make_handler(store):
             if not ok:
                 return self._send(404, b"Not found", "text/plain; charset=utf-8")
             ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
-            if ctype.startswith("text/") or ctype in ("application/javascript",):
+            if ctype.startswith("text/"):
                 ctype += "; charset=utf-8"
-            if full.endswith(".js"):
-                ctype = "text/javascript; charset=utf-8"
             with open(full, "rb") as f:
                 body = f.read()
             self._send(200, body, ctype, {"Cache-Control": "no-cache"})

@@ -47,7 +47,7 @@ class TestCareerBridge(unittest.TestCase):
         self.assertEqual(rn["ma_growth_status"], "faster")
         series = dict(self.d["growth"]["29-1141"])
         self.assertAlmostEqual(rn["ma_growth_pct"], 100 * (series[2025] / series[2019] - 1), delta=0.1)
-        self.assertEqual(series[2025], rn["ma_employment"])  # 2025 matches the OEWS May 2025 file
+        self.assertEqual(series[2025], rn["ma_employment"])
         for o in self.d["occ"]:
             self.assertIn(o["ma_growth_status"], {"faster", "slower", "similar", "too_little_data"})
         for k in ("built_at", "state_rate_2025", "exposure_cut", "silent_cut", "sources"):
@@ -75,7 +75,7 @@ class TestCareerBridge(unittest.TestCase):
 
     def test_employment_total_not_inflated(self):
         total = sum(o["ma_employment"] for o in self.d["occ"])
-        self.assertTrue(3.3e6 <= total <= 3.6e6, total)  # MA OEWS released rows total 3.58M
+        self.assertTrue(3.3e6 <= total <= 3.6e6, total)
 
     def test_state_rate(self):
         self.assertAlmostEqual(self.d["meta"]["state_rate_2025"], 6.18, places=2)
@@ -153,7 +153,6 @@ class TestCareerBridge(unittest.TestCase):
         self.assertAlmostEqual(o["ma_ai_2025"], 0.37, delta=0.5)
         self.assertEqual(o["quadrant"], "High exposure, low adoption")
 
-    # ---- following software's path ----
     def software_years_behind(self, us26):
         c = self.d["meta"]["software_genai_us"]
         if us26 is None:
@@ -189,7 +188,7 @@ class TestCareerBridge(unittest.TestCase):
             self.assertEqual(o["years_behind_software"], yb, o["soc"])
             statuses.add(st)
         self.assertEqual(statuses, {"level", "behind", "not_started", "too_few_ads"})
-        self.assertIn(self.occ["27-1011"]["years_behind_software"], (0.5, 1.0))  # Art Directors
+        self.assertIn(self.occ["27-1011"]["years_behind_software"], (0.5, 1.0))
 
     def test_close_to_reference(self):
         if self.ref is None:
@@ -206,7 +205,7 @@ class TestCareerBridge(unittest.TestCase):
             for k in ("exposure", "ma_ai_2025", "ma_employment", "quadrant", "ma_confidence"):
                 a, b = mo[k], ro[k]
                 if k == "quadrant" and b.startswith("Lower exposure") and 50 < ro["exposure"] <= 55.7:
-                    b = b.replace("Lower exposure", "High exposure")  # reference used the old 55.7 cut
+                    b = b.replace("Lower exposure", "High exposure")
                 bad = (a != b) if isinstance(a, str) or a is None or b is None else abs(a - b) > 0.5
                 if bad:
                     differ.setdefault(k, []).append(soc)

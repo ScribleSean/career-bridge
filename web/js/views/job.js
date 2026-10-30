@@ -1,6 +1,3 @@
-// One job, for career counselors: Lightcast standing and panels first (private builds, when careerbridge.json is
-// loaded), then AI use, the survey summary for the three survey jobs, and the career plan. Design rule: no subtitles, footnotes or helper text; titles, scales and
-// source tags carry the meaning, and explanations live on the About page.
 import {h, fmt, announce, src} from '../util.js';
 import {lineChart, barList} from '../charts.js';
 import {jobSurvey} from './survey.js';
@@ -11,17 +8,14 @@ const GAP = 'High exposure, low adoption', HIHI = 'High exposure, high adoption'
 const SOURCES = {'Where this job stands with AI': ['lc'], 'How much AI is used on this work': ['aei', 'onet'], 'What you can do about it': ['onet', 'aei', 'oews'],
   'Job ads asking for AI skills': ['lc'], 'Is this job following software?': ['lc'], 'Job growth in Massachusetts': ['oewsh'],
   'What people use AI for in this job': ['aei', 'onet', 'lc'], 'Your human edge and what employers ask for': ['lc', 'onet']};
-// No subtitles or footnotes: a panel is its title, its source tags, and its content. Explanations live on the About page.
 const panel = (title, ...kids) => h('section', {class: 'panel'}, h('h3', {}, title), SOURCES[title] ? src(...SOURCES[title]) : null, ...kids);
-const QSHORT = {[GAP]: 'Broad gap', [HIHI]: 'Employers ask', [LOHI]: 'Lower overlap, higher signal', [LOLO]: 'Lower overlap, low signal'};  // the deck's group names
+const QSHORT = {[GAP]: 'Broad gap', [HIHI]: 'Employers ask', [LOHI]: 'Lower overlap, higher signal', [LOLO]: 'Lower overlap, low signal'};
 const tags = (arr) => h('div', {class: 'tags'}, arr.map((s) => h('span', {class: 'tag'}, s)));
 const bare = (s) => s.replace(/^(Knowledge|Work Activities|Abilities): /, '');
 const fold = (summary, ...kids) => h('details', {class: 'more'}, h('summary', {}, summary), h('div', {class: 'morebody'}, ...kids));
 
-/* ------------------------------------------------------------------ header and the short answer */
 function header(ctx, o) {
   const geo = ctx.state.geo === 'MA' ? 'MA' : 'US';
-  // Lightcast verdict first (private build), then the plan's suggestion. Short pills, no sentences.
   const pills = [
     o.lc?.silent_gap ? h('span', {class: 'pill gap'}, 'Silent gap') : null,
     o.lc && !o.lc.silent_gap && QSHORT[o.lc.quadrant] ? h('span', {class: 'pill ' + (o.lc.quadrant === GAP ? 'gap' : 'neutral')}, QSHORT[o.lc.quadrant]) : null];
@@ -37,8 +31,6 @@ function header(ctx, o) {
 }
 const fact = (k, v, s, text) => h('div', {class: 'fact' + (text ? ' text' : '')}, h('dt', {}, k), h('dd', {}, h('span', {class: 'fv'}, v), src(s)));
 
-/** One ruler. The track ranks every job from lowest (left) to highest (right).
- *  ticks: [[position 0-100, label]] printed under the track; ref: {pos, label} marks a reference value above it. */
 function ruler(cls, shape, label, pct, value, ticks, ref) {
   const rank = pct == null ? 'Not enough data' : `Top ${Math.max(1, 100 - pct)}%`;
   const at = (pos) => ({style: `left:${pos}%`});
@@ -61,7 +53,6 @@ function standing(ctx, o) {
       [[0, '0'], [50, '50'], [100, '100']])));
 }
 
-/** Lightcast first: AI overlap and employer demand (private build only). The header pills carry the verdict. */
 function lightcastStanding(ctx, o) {
   const m = ctx.model, r = o.lc.ma_ai_2025, state = m.lcMeta?.state_rate_2025 ?? 6.18;
   const adsFmt = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)}%`;
@@ -72,7 +63,6 @@ function lightcastStanding(ctx, o) {
         named(m.demandAnchors, adsFmt), {pos: m.demandRank(state), label: `State ${state}%`})));
 }
 
-/* ------------------------------------------------------------------ career plan */
 function moveCard(ctx, o, t, extra, meta) {
   const wd = t.wage != null && o.wage != null ? t.wage - o.wage : null;
   return h('li', {class: 'move'},
@@ -131,7 +121,7 @@ function planText(ctx, o, plan) {
   const mv = (plan.moves || []).map((m) => ctx.model.bySoc.get(m.soc)).filter(Boolean).slice(0, 3).map((t) => t.title);
   return [`Career plan: ${o.title}`, '',
     `Do more of: ${plan.lean.join('; ') || 'n/a'}`, `AI can speed up: ${plan.use.join('; ') || 'n/a'}`, mv.length ? `Jobs with similar skills: ${mv.join('; ')}` : '', '',
-    ...plan.timeline.map((s) => `${s.when}: ${s.text}`), '', 'Source: Career Bridge (O*NET 31.0, BLS OEWS, Anthropic Economic Index). AI use shows where AI is used today, not a prediction about jobs.'].filter((l, i, a) => l || a[i - 1]).join('\n');
+    ...plan.timeline.map((s) => `${s.when}: ${s.text}`), '', 'Source: Career Bridge (O*NET 31.0, BLS OEWS, Anthropic Economic Index). AI use shows where people use AI today, not a prediction about jobs.'].filter((l, i, a) => l || a[i - 1]).join('\n');
 }
 
 function planPanel(ctx, o) {
@@ -153,7 +143,6 @@ function planPanel(ctx, o) {
     h('div', {class: 'actions'}, copyBtn));
 }
 
-/* ------------------------------------------------------------------ Lightcast panels (private build) */
 const SOFT = 'software_genai_us';
 const yrsTxt = (yb) => { const t = 2026 - yb, f = t - Math.floor(t); return (f < 0.34 ? 'early ' : f < 0.67 ? 'mid-' : 'late ') + Math.floor(t); };
 function softwareSentence(lc) {
@@ -219,9 +208,7 @@ function lightcastPanels(ctx, o) {
   return out;
 }
 
-/* ------------------------------------------------------------------ entry */
 export function renderJob(root, ctx, o) {
-  // Lightcast leads in private builds; then AI use, the survey summary (three survey jobs), and the plan.
   const lc = ctx.model.full && o.lc ? [lightcastStanding(ctx, o), ...lightcastPanels(ctx, o)] : [];
   root.replaceChildren(h('div', {class: 'jobview'},
     header(ctx, o), ...lc, standing(ctx, o), jobSurvey(ctx, o, panel), planPanel(ctx, o)));

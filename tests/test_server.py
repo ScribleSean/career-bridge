@@ -58,7 +58,6 @@ class ServerTest(unittest.TestCase):
     def titles(self, q):
         return [o["title"] for o in self.json("/api/occupations?q=" + quote(q))]
 
-    # ---- meta ----
     def test_meta(self):
         m = self.json("/api/meta")
         self.assertTrue(m["using_reference"])
@@ -70,7 +69,6 @@ class ServerTest(unittest.TestCase):
         self.assertGreater(m["counts"]["occ"], 500)
         self.assertIn("Office and Administrative Support", m["families"])
 
-    # ---- search ----
     def test_search_shape(self):
         rows = self.json("/api/occupations?q=secretar")
         self.assertTrue(rows)
@@ -99,14 +97,13 @@ class ServerTest(unittest.TestCase):
     def test_search_multiword_and_empty(self):
         self.assertIn("Medical Secretaries and Administrative Assistants", self.titles("medical admin"))
         self.assertEqual(self.titles("zzzqqq"), [])
-        self.assertTrue(self.json("/api/occupations?q="))  # empty query: top jobs
+        self.assertTrue(self.json("/api/occupations?q="))
         self.assertEqual(self.json("/api/occupations?q=43-6013")[0]["soc"], "43-6013")
 
     def test_search_bad_params(self):
         self.json("/api/occupations?q=%ZZ&limit=abc")
         self.json("/api/occupations?q=" + quote("<script>'\"%;"))
 
-    # ---- detail ----
     def test_detail(self):
         d = self.json("/api/occupations/43-6013")
         self.assertEqual(d["occ"]["title"], "Medical Secretaries and Administrative Assistants")
@@ -126,7 +123,6 @@ class ServerTest(unittest.TestCase):
                 self.assertIn("error", body)
         self.json("/api/nothing", status=404)
 
-    # ---- board ----
     def test_board_default(self):
         b = self.json("/api/board")
         self.assertEqual(b["count"], len(b["rows"]))
@@ -162,11 +158,10 @@ class ServerTest(unittest.TestCase):
         w = [r["ma_median_wage"] for r in b["rows"]]
         present = [x for x in w if x is not None]
         self.assertEqual(present, sorted(present, reverse=True))
-        self.assertTrue(all(x is None for x in w[len(present):]))  # nulls last
-        b = self.json("/api/board?sort=DROP&dir=sideways")  # bad params fall back
+        self.assertTrue(all(x is None for x in w[len(present):]))
+        b = self.json("/api/board?sort=DROP&dir=sideways")
         self.assertEqual(b["sort"], "ma_employment")
 
-    # ---- static ----
     def test_static(self):
         code, ctype, body = self.get("/")
         self.assertEqual(code, 200)
@@ -219,9 +214,29 @@ class BuiltDataTest(unittest.TestCase):
             self.assertIn(r["software_path_status"], {"level", "behind", "not_started", "too_few_ads"})
         rank = {"level": 0, "behind": 1, "not_started": 2, "too_few_ads": 3}
         st = [rank[r["software_path_status"]] for r in b["rows"]]
-        self.assertEqual(st, sorted(st))  # level, behind (ascending), not started, then blanks
+        self.assertEqual(st, sorted(st))
         yb = [r["years_behind_software"] for r in b["rows"] if r["software_path_status"] == "behind"]
         self.assertEqual(yb, sorted(yb))
+
+
+class NoDataServerTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = server.make_server(port=0, data_path=os.path.join(HERE, "no-such-data.json"))
+        cls.base = "http://127.0.0.1:%d" % cls.httpd.server_address[1]
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+
+    get = ServerTest.get
+
+    def test_static_content_types(self):
+        for path, ctype in (("/", "text/html; charset=utf-8"), ("/app.js", "text/javascript; charset=utf-8"),
+                            ("/js/util.js", "text/javascript; charset=utf-8"), ("/styles.css", "text/css; charset=utf-8")):
+            self.assertEqual(self.get(path)[:2], (200, ctype), path)
 
 
 class SyntheticServerTest(unittest.TestCase):
@@ -237,9 +252,21 @@ class SyntheticServerTest(unittest.TestCase):
             self.assertEqual([o["soc"] for o in store.search(query)], ["1"])
         for query in ("café", "cafe", "cafe\u0301"):
             self.assertIn("3", [o["soc"] for o in store.search(query)])
-        self.assertEqual([o["soc"] for o in store.search("writ")], ["1"])  # partial words still match while typing
+        self.assertEqual([o["soc"] for o in store.search("writ")], ["1"])
         self.assertEqual(store._words("résumé café"), ["resume", "cafe"])
         self.assertIn("3", [o["soc"] for o in store.board({"q": "café"})["rows"]])
+
+    def test_board_software_path_sort(self):
+        rows = [("level", 0.0), ("behind", 2.5), ("not_started", None), ("too_few_ads", None), ("behind", 0.5)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "synthetic.json"
+            path.write_text(json.dumps({"occ": [
+                {"soc": str(i), "title": "Job %d" % i, "software_path_status": st, "years_behind_software": yb}
+                for i, (st, yb) in enumerate(rows)]}))
+            store = server.Store(str(path))
+        order = lambda d: [r["soc"] for r in store.board({"sort": "years_behind_software", "dir": d})["rows"]]
+        self.assertEqual(order("asc"), ["0", "4", "1", "2", "3"])
+        self.assertEqual(order("desc"), ["2", "1", "4", "0", "3"])
 
     def test_remote_host_requires_explicit_flag_before_loading_data(self):
         with patch.object(server, "Store") as store, patch.object(server, "ThreadingHTTPServer") as http:
@@ -280,7 +307,6 @@ class SyntheticServerTest(unittest.TestCase):
 
 class StaticBuildTest(unittest.TestCase):
     def test_allowlist_and_forbidden_output(self):
-        # Every input and output is synthetic; never read the workspace data/ or site/.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             shutil.copyfile(Path(ROOT) / "build-site.sh", root / "build-site.sh")

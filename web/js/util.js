@@ -1,8 +1,5 @@
-// Small DOM and formatting helpers shared by every view. No dependencies.
-
 export const $ = (id) => document.getElementById(id);
 
-/** h('div', {class: 'x', onclick: fn}, 'text', childNode, [more]) -> element. Attribute values of null/false are skipped. */
 export function h(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -45,7 +42,6 @@ export const fmt = {
   },
 };
 
-/** Screen-reader announcement through the polite live region in index.html. */
 let announceTimer;
 export function announce(msg) {
   const el = $('live');
@@ -54,18 +50,15 @@ export function announce(msg) {
   announceTimer = setTimeout(() => { el.textContent = ''; el.textContent = msg; }, 150);
 }
 
-/** Source tags: every figure names where it comes from. Lightcast is the core dataset, so its tag is highlighted. */
 const SRC = {lc: ['Lightcast', 'lc'], oews: ['BLS OEWS May 2025', ''], oewsh: ['BLS OEWS 2019–2025', ''], onet: ['O*NET 31.0', ''], aei: ['Anthropic Economic Index', ''], sig: ['Career Bridge signals · sample', 'sgn']};
 export const src = (...keys) => h('span', {class: 'srcs'}, h('span', {class: 'sr'}, 'Source: '), keys.map((k) => h('span', {class: ('src ' + SRC[k][1]).trim()}, SRC[k][0])));
 
-/** Marks a what-if model as experimental: shown on every 2031 projection. */
 export const experimental = () => h('p', {class: 'warn'}, h('b', {}, 'Experimental.'), ' A what-if, not a forecast. It hasn’t been checked against what actually happened to jobs.');
 export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const loading = (msg) => h('div', {class: 'status', role: 'status'}, h('div', {class: 'spinner', 'aria-hidden': 'true'}), h('span', {}, msg));
 export const errorBox = (msg, retry) => h('div', {class: 'status err', role: 'alert'}, h('span', {}, msg), retry ? h('button', {type: 'button', onclick: retry}, 'Try again') : null);
 
-/** Route hashes use #/. Other fragments belong to the browser's in-page navigation. */
 export function parseHash(hash) {
   if (hash && !hash.startsWith('#/')) return null;
   const [path, query = ''] = hash.replace(/^#\/?/, '').split('?');

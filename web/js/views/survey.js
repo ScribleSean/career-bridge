@@ -1,11 +1,9 @@
-// The AI-at-work survey (#/survey) and its results (#/results). Results are totals only, with small groups hidden.
 import {h, announce, fmt, src} from '../util.js';
 import {JOBS, jobShort, ACT, actsFor, REGIONS, AI_LEVELS, WORKER_Q, EMPLOYER_Q, submit, totals, MIN_CELL, myCount, resetMine} from '../survey.js';
 
 const pct = (v) => (v == null ? '—' : `${Math.round(v * 100)}%`);
-const sampleNote = () => h('p', {class: 'warn'}, h('b', {}, 'Sample results. '), 'These responses are made up to show how the totals would read. They are not real survey data.');
+const sampleNote = () => h('p', {class: 'warn'}, h('b', {}, 'Sample results. '), 'These responses are made up to show how the totals would read.');
 
-/* ------------------------------------------------------------------ the survey */
 export function renderSurvey(root, ctx, params) {
   const job = JOBS.find((j) => j.soc === params.job);
   const as = ['worker', 'employer'].includes(params.as) ? params.as : '';
@@ -62,14 +60,14 @@ export function renderSurvey(root, ctx, params) {
 
   root.replaceChildren(h('div', {class: 'surveyview'},
     h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, `${jobShort(job.soc)}: ${as === 'worker' ? 'how you work' : 'what the role needs'}`),
-      h('p', {class: 'lede'}, `${as === 'worker' ? 'About five minutes' : 'About three minutes'}. Stored as-is in this browser until you choose “Clear my answers”.`)),
+      h('p', {class: 'lede'}, `${as === 'worker' ? 'About five minutes' : 'About three minutes'}. Your answers stay in this browser until you choose “Clear my answers”.`)),
     form));
 }
 
 function renderPick(root, ctx) {
   root.replaceChildren(h('div', {class: 'surveyview'},
     h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'AI at work: a short survey'),
-      h('p', {class: 'lede'}, 'Stored as-is in this browser until you choose “Clear my answers”.')),
+      h('p', {class: 'lede'}, 'Your answers stay in this browser until you choose “Clear my answers”.')),
     h('ul', {class: 'jobcards'}, JOBS.map((j) => {
       const o = ctx.model.bySoc.get(j.soc);
       return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
@@ -79,7 +77,6 @@ function renderPick(root, ctx) {
     myCount() ? h('p', {class: 'fine'}, `You've answered ${myCount()} time${myCount() === 1 ? '' : 's'} in this browser. `, h('button', {type: 'button', class: 'linkbtn', onclick: () => { if (resetMine()) { renderPick(root, ctx); announce('Your answers were cleared.'); } else { announce('Could not clear your answers. Try again.'); } }}, 'Clear my answers')) : null));
 }
 
-/* ------------------------------------------------------------------ results */
 export function renderResults(root, ctx, params) {
   const {model} = ctx;
   const job = JOBS.find((j) => j.soc === params.job) || JOBS[0];
@@ -97,7 +94,6 @@ export function renderResults(root, ctx, params) {
         h('span', {class: 'sfill often', style: `width:${a.aiOften * 100}%`}), h('span', {class: 'sfill some', style: `left:${a.aiOften * 100}%;width:${a.aiSome * 100}%`})), h('span', {class: 'sval'}, pct(a.doPct))) : null,
       t.okE ? h('span', {class: 'srow'}, h('span', {class: 'strack'}, h('span', {class: 'sfill need', style: `width:${a.needPct * 100}%`}), h('span', {class: 'stick', style: `left:${a.growPct * 100}%`, title: 'Becoming more important'})), h('span', {class: 'sval'}, pct(a.needPct))) : null)))) : hidden('people', t.nW + t.nE);
 
-  // Where what workers do and what employers say differ most: plain sentences from the totals.
   const gaps = t.okW && t.okE ? t.acts.map((a) => ({a, d: a.growPct - (a.aiOften + a.aiSome)})).filter((x) => !ACT[x.a.id].onet && x.d > 0.05).sort((x, y) => y.d - x.d).slice(0, 3) : [];
 
   root.replaceChildren(h('div', {class: 'resultsview'},
@@ -110,11 +106,11 @@ export function renderResults(root, ctx, params) {
       h('label', {for: 'rr'}, 'Region', h('select', {id: 'rr', onchange: (e) => set({region: e.target.value})}, h('option', {value: ''}, 'All of Massachusetts'), REGIONS.map((x) => h('option', {value: x, selected: x === region}, x))))),
     h('div', {class: 'summary four'},
       tile(pct(t.useAnyAI), 'of workers use an AI tool for work', `${t.nW} workers`),
-      tile(pct(t.trainedByEmployer), 'of workers were trained on AI by their employer', `${t.nW} workers`),
+      tile(pct(t.trainedByEmployer), 'of workers got AI training from their employer', `${t.nW} workers`),
       tile(pct(t.adsMentionAI), 'of employers mention AI skills in job ads', `${t.nE} employers`),
       tile(pct(t.employersTrain), 'of employers train this role on AI', `${t.nE} employers`)),
     gaps.length ? h('section', {class: 'panel act'}, h('h3', {}, 'Where workers and employers differ'),
-      h('ul', {class: 'ticks plain'}, gaps.map(({a}) => h('li', {}, h('b', {}, ACT[a.id].label), `: ${pct(a.aiOften + a.aiSome)} of workers do it with AI; ${pct(a.growPct)} of employers say it is becoming more important.`)))) : null,
+      h('ul', {class: 'ticks plain'}, gaps.map(({a}) => h('li', {}, h('b', {}, ACT[a.id].label), `: ${pct(a.aiOften + a.aiSome)} of workers do it with AI, and ${pct(a.growPct)} of employers say it is becoming more important.`)))) : null,
     h('section', {class: 'panel'}, h('h3', {}, 'What the work involves'),
       h('div', {class: 'legend sq'}, h('span', {style: '--c:#B9CDE3'}, 'Workers who do it'), h('span', {style: '--c:#1F6E43'}, 'with AI most of the time'), h('span', {style: '--c:#8CC5A3'}, 'with AI sometimes'), h('span', {style: '--c:#A9441A'}, 'Employers: role needs it'), h('span', {class: 'tk'}, 'Employers: becoming more important')),
       h('div', {class: 'saxis', 'aria-hidden': 'true'}, ['0%', '25%', '50%', '75%', '100%'].map((x, i) => h('span', {style: `left:${i * 25}%`}, x))),
@@ -126,7 +122,6 @@ export function renderResults(root, ctx, params) {
     h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/survey?job=${job.soc}&as=worker`}, 'Take the survey'), h('a', {class: 'btn', href: ctx.hrefJob(job.soc)}, `Look up ${job.short.toLowerCase()}`))));
 }
 
-/** Job page: for the three survey jobs, a short summary that links to the results. */
 export function jobSurvey(ctx, o, panel) {
   const job = JOBS.find((j) => j.soc === o.soc);
   if (!job) return null;

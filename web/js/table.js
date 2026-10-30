@@ -1,8 +1,5 @@
-// Sortable table used by Explore and the workforce board. The first column is a real link, so keyboard and
-// screen-reader users reach every job without the chart. Clicking anywhere else in a row opens it too.
 import {h, src} from './util.js';
 
-/** Sort rows by a column; empty values always go last. */
 export function sortRows(rows, col, dir) {
   const val = (r) => { const v = col.value(r); return typeof v === 'string' ? v.toLowerCase() : v; };
   const present = rows.filter((r) => val(r) != null), missing = rows.filter((r) => val(r) == null);
@@ -10,8 +7,6 @@ export function sortRows(rows, col, dir) {
   return present.concat(missing);
 }
 
-/** columns: [{key, label, num, opt, src, value(row), cell(row) -> node|string, first}]  sort: {key, dir}
- *  src: a source key (see util.js SRC); the header then shows that source's tag under the label. */
 export function dataTable({caption, columns, rows, sort, onSort, href, onOpen}) {
   const head = h('tr', {}, columns.map((c) => h('th', {scope: 'col', class: [c.num ? 'n' : '', c.opt ? 'opt' : ''].join(' ').trim() || null,
     'aria-sort': sort.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'},
