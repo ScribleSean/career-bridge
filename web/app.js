@@ -53,7 +53,8 @@ function route() {
   else { renderAbout(view, ctx); document.title = 'About the numbers · Career Bridge'; }
   if (key !== lastKey) {   // new page: move focus to its heading so screen-reader users hear where they are
     lastKey = key;
-    const head = $('occ-title') || $('view-title');
+    const at = r.params.at && $(r.params.at);
+    const head = (at && view.contains(at) ? at : null) || $('occ-title') || $('view-title');
     if (head) { head.focus({preventScroll: true}); head.scrollIntoView({block: 'start', behavior: reduceMotion() ? 'auto' : 'smooth'}); }
   } else if (activeId && $(activeId)) $(activeId).focus({preventScroll: true});
 }
@@ -107,7 +108,7 @@ function drawExamples() {
     return;
   }
   model = makeModel(data, state.geo);
-  if (model.full) $('lcnote').textContent = 'Data Source: Lightcast, 2026 · ';
+  if (model.full) { $('lcnote').textContent = 'Data Source: Lightcast, 2026 · '; $('lcpub').remove(); }
   if (data.cb?.meta?.synthetic) { $('notice').hidden = false; $('notice').textContent = 'Test data: the Lightcast numbers shown are made up for testing.'; }
   drawGeo(); drawExamples();
   window.addEventListener('hashchange', route);

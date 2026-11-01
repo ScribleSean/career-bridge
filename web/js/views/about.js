@@ -5,6 +5,7 @@ export function renderAbout(root, ctx) {
   const {model} = ctx;
   const u = model.usage, work = u.use_case.find((c) => c.name === 'Work');
   const sec = (title, ...kids) => h('section', {class: 'about-sec'}, h('h3', {}, title), ...kids);
+  const anchored = (id, title, ...kids) => h('section', {class: 'about-sec'}, h('h3', {id, tabindex: '-1'}, title), ...kids);
   root.replaceChildren(h('div', {class: 'aboutview'},
     h('header', {class: 'viewhead'}, h('h2', {id: 'view-title', tabindex: '-1'}, 'About the numbers')),
     h('div', {class: 'panel about'},
@@ -17,7 +18,10 @@ export function renderAbout(root, ctx) {
         h('p', {}, 'For some jobs, Anthropic didn’t publish usage, so we used the tasks alone. The job page marks those “Estimated from tasks”.'),
         model.full ? h('p', {}, h('b', {}, 'The four groups.'), ' “More AI overlap” means a Lightcast score above 50, where Lightcast’s Medium-high and High bands start. “Employers ask” means at least 6.18% of Massachusetts job ads ask for AI skills, the statewide rate in 2025. The broad gap is more overlap with fewer employers asking. The silent gap is the part of the broad gap where under 1% of the job’s ads ask for AI skills. The two lower-overlap groups split the same way: low signal (under 6.18%) and higher signal.') : null,
         model.full ? h('p', {}, h('b', {}, 'AI overlap'), ' comes from Lightcast, a labor-market data company. It scores how much of a job’s skills and tasks overlap with what AI can do today. ', h('b', {}, 'MA job ads asking for AI'), ' is the share of Massachusetts job ads that name at least one AI skill.')
-          : h('p', {}, 'This version leaves out the measures from Lightcast, a labor-market data company, and the view for workforce boards. That data is licensed and can’t be shared publicly.')),
+          : h('p', {}, 'This version keeps one total from Lightcast, a labor-market data company: the 526,000 figure below. It leaves out the detailed Lightcast measures and the view for workforce boards. That data is licensed and can’t be shared publicly.')),
+      anchored('workers526', 'The 526,000 workers',
+        h('p', {}, '526,000 Massachusetts workers (BLS OEWS May 2025) are in jobs that score above 50 on the Lightcast AI Exposure Index and where under 1% of 2025 Massachusetts job ads ask for any AI skill. Human Edge Studio analysis, October 2026.'),
+        model.full ? null : h('p', {}, 'AI exposure means how much of a job’s skills and tasks overlap with what AI can do today. It doesn’t predict job loss.')),
       sec('How people use Claude',
         h('p', {}, `In ${model.meta.usage_period}, ${fmt.pct(work.may, 0)} of US Claude.ai conversations were about work, ${fmt.pct(u.use_case.find((c) => c.name === 'Personal').may, 0)} were personal and ${fmt.pct(u.use_case.find((c) => c.name === 'Coursework').may, 0)} were for school. Work use held steady between the two months. Personal use went up and school use went down. That looks like the end of a school term, not a lasting change. Anthropic has published only two months, so we can’t say where things are heading.`),
         h('div', {class: 'topics'}, h('h4', {}, 'What people ask Claude for, May 2026'),
@@ -32,6 +36,6 @@ export function renderAbout(root, ctx) {
           h('li', {}, '“Is this job following software?” places the share of a job’s ads asking for generative-AI skills on the path software took (Lightcast). It shows a position, not a timeline. Since 2024, other jobs have moved at about half to four-fifths of software’s speed.'),
           h('li', {}, 'Job growth in Massachusetts shows what happened from 2019 to 2025 (BLS OEWS), not why.'),
           h('li', {}, 'We don’t have race, gender or age numbers.'))),
-      sec('Where the numbers come from', h('ul', {class: 'notes'}, [...model.meta.sources, ...(model.full ? ['Lightcast AI Exposure and Adoption by Occupation, 2023 to Sep 2026. Data Source: Lightcast, 2026.'] : [])].map((s) => h('li', {}, s)))),
+      sec('Where the numbers come from', h('ul', {class: 'notes'}, [...model.meta.sources, ...(model.full ? ['Lightcast AI Exposure and Adoption by Occupation, 2023 to Sep 2026. Data Source: Lightcast, 2026.'] : ['Lightcast AI Exposure Index, 2026 (one statewide total only)'])].map((s) => h('li', {}, s)))),
       h('p', {class: 'foot'}, `${model.all.length} jobs · built ${(model.meta.built_at || '').slice(0, 10)} · ${model.full ? 'private version with Lightcast data' : 'public version'}`))));
 }

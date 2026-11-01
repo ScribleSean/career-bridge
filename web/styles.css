@@ -332,7 +332,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .finding { display: grid; grid-template-columns: auto 1fr; gap: 8px 24px; align-items: center; background: #fff; border: 1px solid var(--line); padding: 22px 24px; }
 .finding .v { font-size: 3rem; font-weight: 700; color: var(--brand); line-height: 1; font-variant-numeric: tabular-nums; }
 .finding b { font-size: 1.12rem; }
-.finding .s { color: var(--muted); font-size: .88rem; display: block; margin-top: 6px; }
+.finding .fig { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.srclink { display: inline-block; text-decoration: none; }
+.srclink:hover .src { border-color: currentColor; }
 @media (max-width: 640px) { .finding { grid-template-columns: 1fr; } }
 .res { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
 .reshead { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }

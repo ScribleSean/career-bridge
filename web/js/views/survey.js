@@ -111,14 +111,13 @@ export function renderResults(root, ctx, params) {
       tile(pct(t.employersTrain), 'of employers train this role on AI', `${t.nE} employers`)),
     gaps.length ? h('section', {class: 'panel act'}, h('h3', {}, 'Where workers and employers differ'),
       h('ul', {class: 'ticks plain'}, gaps.map(({a}) => h('li', {}, h('b', {}, ACT[a.id].label), `: ${pct(a.aiOften + a.aiSome)} of workers do it with AI, and ${pct(a.growPct)} of employers say it is becoming more important.`)))) : null,
-    h('section', {class: 'panel'}, h('h3', {}, 'What the work involves'),
+    h('section', {class: 'panel'}, h('h3', {}, 'What the work involves'), src('onet'),
       h('div', {class: 'legend sq'}, h('span', {style: '--c:#B9CDE3'}, 'Workers who do it'), h('span', {style: '--c:#1F6E43'}, 'with AI most of the time'), h('span', {style: '--c:#8CC5A3'}, 'with AI sometimes'), h('span', {style: '--c:#A9441A'}, 'Employers: role needs it'), h('span', {class: 'tk'}, 'Employers: becoming more important')),
       h('div', {class: 'saxis', 'aria-hidden': 'true'}, ['0%', '25%', '50%', '75%', '100%'].map((x, i) => h('span', {style: `left:${i * 25}%`}, x))),
       rows),
     t.okW ? h('section', {class: 'panel'}, h('h3', {}, 'What would help workers most'),
       h('ul', {class: 'res'}, t.help.map((x) => h('li', {}, h('div', {class: 'reshead'}, h('b', {}, x.label)),
         h('span', {class: 'srow'}, h('span', {class: 'strack'}, h('span', {class: 'sfill do', style: `width:${x.pct * 100}%`})), h('span', {class: 'sval'}, pct(x.pct))))))) : null,
-    h('p', {class: 'fine'}, `${t.nW} workers and ${t.nE} employers. Totals only; any group with fewer than ${MIN_CELL} responses is hidden. Activities come from O*NET 31.0 for this job, plus three AI activities O*NET doesn’t track.`),
     h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/survey?job=${job.soc}&as=worker`}, 'Take the survey'), h('a', {class: 'btn', href: ctx.hrefJob(job.soc)}, `Look up ${job.short.toLowerCase()}`))));
 }
 
