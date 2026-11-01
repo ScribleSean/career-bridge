@@ -278,7 +278,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .pill { border-radius: 0; }
 @media (max-width: 640px) {
   .brand .word b { font-size: 1.35rem; }
-  .masthead nav.tabs { overflow-x: auto; flex-wrap: nowrap; white-space: nowrap; scrollbar-width: none; }
+  .masthead nav.tabs { padding-inline: max(4px, env(safe-area-inset-left, 0px)); row-gap: 4px; }
+  .masthead nav.tabs a:first-child { margin-left: 0; }
 }
 
 .overview { display: grid; gap: 40px; }
