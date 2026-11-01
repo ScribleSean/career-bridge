@@ -339,7 +339,9 @@ class WebDiscoveryTest(unittest.TestCase):
         node = shutil.which("node")
         if node is None:
             self.skipTest("node not installed")
-        result = subprocess.run([node, "--test", "tests/"], cwd=ROOT, capture_output=True, text=True)
+        files = sorted(str(p) for p in Path(HERE).glob("*.test.mjs"))
+        self.assertTrue(files, "no tests/*.test.mjs files found")
+        result = subprocess.run([node, "--test", *files], cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
