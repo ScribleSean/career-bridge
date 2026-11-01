@@ -8,6 +8,8 @@ A short, repeatable survey for workers and employers, published only as totals.<
 
 <p align="center"><b>3rd place, Human Edge Studio by SG+I</b> · October 24, 2026 · team The Communicators</p>
 
+<p align="center"><img src="docs/img/demo.gif" width="720" alt="A worker marks where AI helps and submits; their totals stay hidden under 10 responses; then the labelled sample totals show where workers and employers differ"></p>
+
 ---
 
 ## What we found
@@ -18,7 +20,6 @@ Ads show what employers ask for. They don't show what people in those jobs do wi
 
 ## The survey
 
-<img src="docs/img/tour-survey.png" alt="A worker picks their job, marks which activities they do and where AI helps, and submits. The totals then include their answers." width="100%">
 
 - Workers take about five minutes. They say which work activities they do in a typical week and whether AI helps with each, which AI tools they use, whether they were trained, and what would help.
 - Employers take about three minutes. They say what the role needs, what is becoming more important, whether their job ads mention AI, and whether they train people on AI.
@@ -27,7 +28,6 @@ Ads show what employers ask for. They don't show what people in those jobs do wi
 
 ## The results
 
-<img src="docs/img/tour-results.png" alt="Sample results: share of workers using AI, employer training, job ads mentioning AI, and where workers and employers differ" width="100%">
 
 The results page shows only totals by job and region, and it hides any group with fewer than 10 responses. The survey doesn't ask for names or company names. The page also shows where workers and employers differ, for example AI activities that employers say are becoming more important but few workers do yet. The workers in those gaps are the ones who could use AI training, such as the state's free courses.
 
