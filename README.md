@@ -64,7 +64,7 @@ If the licensed Lightcast files are in the dataset folder, `./demo.sh` also runs
 
 Issues and pull requests are welcome. Before you open a PR:
 
-- Run `python -m unittest discover -s tests` and `node --test tests/`.
+- Run `python -m unittest discover -s tests` and `node --test tests/*.test.mjs`.
 - Load the app, open the overview, the survey, the results, a job and About, and check that the console shows no errors.
 - Don't commit anything under `data/` or `sgi_dataset/`. Lightcast data is licensed, and `build-site.sh` fails if `site/` would contain it.
 

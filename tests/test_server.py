@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import os
+import re
 import sys
 import threading
 import unittest
@@ -341,8 +342,12 @@ class WebDiscoveryTest(unittest.TestCase):
             self.skipTest("node not installed")
         files = sorted(str(p) for p in Path(HERE).glob("*.test.mjs"))
         self.assertTrue(files, "no tests/*.test.mjs files found")
-        result = subprocess.run([node, "--test", *files], cwd=ROOT, capture_output=True, text=True)
+        result = subprocess.run(
+            [node, "--test", "--test-reporter=tap", *files], cwd=ROOT, capture_output=True, text=True
+        )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        passed = re.search(r"^# pass (\d+)$", result.stdout, re.MULTILINE)
+        self.assertTrue(passed and int(passed.group(1)) > 0, "node ran no passing tests:\n" + result.stdout)
 
 
 if __name__ == "__main__":
