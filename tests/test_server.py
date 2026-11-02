@@ -348,6 +348,9 @@ class WebDiscoveryTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         passed = re.search(r"^# pass (\d+)$", result.stdout, re.MULTILINE)
         self.assertTrue(passed and int(passed.group(1)) > 0, "node ran no passing tests:\n" + result.stdout)
+        # Node reports a file that defines no tests as one passing test named after the file.
+        empty = re.findall(r"^ok \d+ - (.+\.test\.mjs)$", result.stdout, re.MULTILINE)
+        self.assertEqual(empty, [], "node test files define no tests")
 
 
 if __name__ == "__main__":
