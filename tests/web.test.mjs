@@ -48,7 +48,7 @@ test('a group with fewer than 10 responses is hidden', () => {
 });
 
 import {makeModel} from '../web/js/data.js';
-import {parseHash, store} from '../web/js/util.js';
+import {parseHash, store, h, fmt} from '../web/js/util.js';
 import {renderJob} from '../web/js/views/job.js';
 import {renderOverview} from '../web/js/views/overview.js';
 import {renderSurvey, renderResults} from '../web/js/views/survey.js';
@@ -72,11 +72,12 @@ globalThis.document = {createElement: (tag) => new Element(tag), createElementNS
 function nodes(root, predicate) {
   return [root, ...root.children.filter((c) => typeof c === 'object').flatMap((c) => nodes(c, () => true))].filter(predicate);
 }
-function context(geo = 'MA', patch = {}, licensed = false) {
+function context(geo = 'MA', patch = {}, licensed = false, count = 1) {
   const o = {soc: JOBS[0].soc, title: 'Example job', group: 'Example', ma_jobs: 1200, us_jobs: 900000,
     ma_wage: 60000, us_wage: 80000, g: 5, growth_pct: 12, z: 50, ...patch};
-  const model = makeModel({atlas: {meta: {}, occ: [o], plans: {}}, cb: licensed ? {
-    meta: {}, occ: [{soc: o.soc, exposure: 60, ma_ai_2025: .5, quadrant: QUADS[0], silent_gap: true}],
+  const occ = Array.from({length: count}, (_, i) => ({...o, soc: i ? `${o.soc}-${i}` : o.soc}));
+  const model = makeModel({atlas: {meta: {}, occ, plans: {}}, cb: licensed ? {
+    meta: {}, occ: occ.map(({soc}) => ({soc, exposure: 60, ma_ai_2025: .5, quadrant: QUADS[0], silent_gap: true})),
     strengths: {[o.soc]: [['Missing importance', null, 1], ['Missing difference', 4, null], ['Valid strength', 4, 1]]},
   } : null}, geo);
   return {model, state: {geo}, hrefJob: (soc) => `#/job/${soc}`, go() {}};
@@ -265,5 +266,55 @@ test('failed storage keeps the form visible and success alone shows thank-you', 
     form.events.submit({preventDefault() {}, currentTarget: form});
     assert.equal(root.textContent.includes('Thank you'), !fail);
     assert.equal(root.textContent.includes('Could not save your answers. Try again.'), fail);
+  }
+});
+
+import {plural} from '../web/js/util.js';
+import {renderAbout} from '../web/js/views/about.js';
+
+test('counts read "1 worker" and "2 workers" wherever a number meets a noun', (t) => {
+  assert.equal(plural(1, 'job'), 'job'); assert.equal(plural(2, 'job'), 'jobs'); assert.equal(plural(0, 'job'), 'jobs');
+  const says = (root, n, noun) => {
+    const text = root.textContent, word = n === 1 ? noun : noun + 's';
+    assert.match(text, new RegExp(`(^|[^\\d,])${n} ${word}(?![a-z])`), `expected “${n} ${word}” in: ${text}`);
+  };
+  for (const n of [1, 2]) {
+    const cards = context('MA', {ma_jobs: n});
+    for (const fn of [renderOverview, renderSurvey]) says(nodes(render(fn, cards, {}), (x) => x.className === 'jobcard')[0], n, 'Massachusetts worker');
+    const board = render(renderBoard, context('MA', {ma_jobs: 1}, true, n), {});
+    says(board, n, 'job'); says(board, n, 'MA worker');
+    const about = context('MA', {}, false, n);
+    Object.assign(about.model, {usage: {use_case: ['Work', 'Personal', 'Coursework'].map((name) => ({name, may: 30})), topics: []}, meta: {sources: []}});
+    says(render(renderAbout, about), n, 'job');
+    const move = context('MA', {ma_jobs: n}, true, 2), [from, to] = move.model.all;
+    move.model.plans[from.soc] = {lean: [], use: [], timeline: [], moves: [{soc: to.soc, sim: .8, skills: []}]};
+    move.model.cb.paths = {[from.soc]: [[to.soc, .8, 1000, '']]};
+    to.lc.ma_employment = n;
+    const job = render(renderJob, move, from);
+    says(nodes(job, (x) => x.className === 'moves')[0], n, 'worker');
+    nodes(job, (x) => x.tag === 'button' && x.textContent === 'Employers want AI skills')[0].events.click({currentTarget: {parentNode: {querySelectorAll: () => []}}});
+    says(nodes(job, (x) => x.className === 'moves')[0], n, 'MA worker');
+    const app = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
+    const res = new Element('ul'), q = new Element('input');
+    q.removeAttribute = () => {};
+    const sandbox = {h, fmt, plural, res, q, active: -1, hits: [{o: {soc: '1', title: 'Example job', jobs: n + 0.4}}]};
+    vm.createContext(sandbox);
+    vm.runInContext(app.slice(app.indexOf('function drawResults()'), app.indexOf('\nfunction ', app.indexOf('function drawResults()'))) + '\ndrawResults();', sandbox);
+    says(res, n, 'job'); // a fractional count is shown and pluralized as the same rounded number
+    let said = '';
+    Object.assign(sandbox, {q: {value: 'example'}, model: {occ: []}, search: () => Array(n).fill(sandbox.hits[0]), drawResults() {}, announce: (m) => { said = m; }});
+    vm.runInContext(app.slice(app.indexOf('function runSearch()'), app.indexOf('\nq.addEventListener')) + '\nrunSearch();', sandbox);
+    says({textContent: said}, n, 'matching job');
+  }
+  storage(t);
+  const berk = (x) => ({...x, region: 'Berkshire'});
+  submit(berk(worker()));
+  says(render(renderSurvey, context(), {}), 1, 'time');
+  submit(berk(employer()));
+  says(render(renderSurvey, context(), {}), 2, 'time');
+  for (const n of [1, 2]) {
+    if (n === 2) { submit(berk(worker())); submit(berk(employer())); }
+    const root = render(renderResults, context(), {source: 'mine', region: 'Berkshire'});
+    says(root, n, 'worker'); says(root, n, 'employer');
   }
 });

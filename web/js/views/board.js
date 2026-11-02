@@ -1,4 +1,4 @@
-import {h, fmt, src} from '../util.js';
+import {h, fmt, src, plural} from '../util.js';
 import {dataTable, sortRows} from '../table.js';
 
 export const QUADS = ['High exposure, low adoption', 'High exposure, high adoption', 'Lower exposure, high adoption', 'Lower exposure, low adoption', 'Too few MA job ads to measure'];
@@ -26,6 +26,7 @@ export function renderBoard(root, ctx, params) {
     .map((o) => ({...o, jobs: o.ma_jobs, wage: o.ma_wage}));
   const allWorkers = withLc.reduce((s, o) => s + o.jobs, 0);
   const rows = withLc.filter((o) => (!quad || (quad === SILENT ? o.lc.silent_gap : o.lc.quadrant === quad)) && (!family || o.group === family) && (!q || o.title.toLowerCase().includes(q)));
+  const total = rows.reduce((s, o) => s + o.jobs, 0);
   const stateRate = model.lcMeta?.state_rate_2025 ?? 6.18;
 
   const cut = model.lcMeta?.silent_cut ?? 1, growth = model.lcMeta?.group_growth || {};
@@ -71,7 +72,7 @@ export function renderBoard(root, ctx, params) {
       h('label', {for: 'fg'}, 'Kind of work', h('select', {id: 'fg', onchange: (e) => set({family: e.target.value})},
         [['', 'All kinds of work'], ...model.groups.map((g) => [g, g])].map(([v, t]) => h('option', {value: v, selected: v === family}, t)))),
       h('label', {for: 'fs'}, 'Job', h('input', {id: 'fs', type: 'search', value: params.q || '', onchange: (e) => set({q: e.target.value.trim()})}))),
-    h('p', {class: 'count', 'aria-live': 'polite'}, `${rows.length} jobs · ${fmt.n(rows.reduce((s, o) => s + o.jobs, 0))} MA workers`),
+    h('p', {class: 'count', 'aria-live': 'polite'}, `${rows.length} ${plural(rows.length, 'job')} · ${fmt.n(total)} MA ${plural(total, 'worker')}`),
     dataTable({caption: 'Massachusetts jobs by how much AI overlaps with the work and how many employers ask for AI skills. Select a column heading to sort.', columns: cols,
       rows: sortRows(rows, col, sort.dir), sort: {key: col.key, dir: sort.dir}, onSort: (key, dir) => set({sort: key, dir}), href: (o) => ctx.hrefJob(o.soc), onOpen: (o) => ctx.go('job', {}, o.soc)})));
 }

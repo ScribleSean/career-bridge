@@ -1,4 +1,4 @@
-import {h, fmt} from '../util.js';
+import {h, fmt, plural} from '../util.js';
 import {barList} from '../charts.js';
 
 export function renderAbout(root, ctx) {
@@ -37,5 +37,5 @@ export function renderAbout(root, ctx) {
           h('li', {}, 'Job growth in Massachusetts shows what happened from 2019 to 2025 (BLS OEWS), not why.'),
           h('li', {}, 'We don’t have race, gender or age numbers.'))),
       sec('Where the numbers come from', h('ul', {class: 'notes'}, [...model.meta.sources, ...(model.full ? ['Lightcast AI Exposure and Adoption by Occupation, 2023 to Sep 2026. Data Source: Lightcast, 2026.'] : ['Lightcast AI Exposure Index, 2026 (one statewide total only)'])].map((s) => h('li', {}, s)))),
-      h('p', {class: 'foot'}, `${model.all.length} jobs · built ${(model.meta.built_at || '').slice(0, 10)} · ${model.full ? 'private version with Lightcast data' : 'public version'}`))));
+      h('p', {class: 'foot'}, `${model.all.length} ${plural(model.all.length, 'job')} · built ${(model.meta.built_at || '').slice(0, 10)} · ${model.full ? 'private version with Lightcast data' : 'public version'}`))));
 }

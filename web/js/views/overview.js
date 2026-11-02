@@ -1,4 +1,4 @@
-import {h, fmt, src} from '../util.js';
+import {h, fmt, src, plural} from '../util.js';
 import {JOBS} from '../survey.js';
 
 export function renderOverview(root, ctx) {
@@ -28,7 +28,7 @@ export function renderOverview(root, ctx) {
       h('ul', {class: 'jobcards'}, JOBS.map((j) => {
         const o = model.bySoc.get(j.soc);
         return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
-          h('p', {}, o?.jobs == null ? 'Not enough data' : [h('b', {}, fmt.n(o.jobs)), ` ${model.geo === 'US' ? 'US' : 'Massachusetts'} workers · median pay `, h('b', {}, o.wage == null ? 'Not enough data' : fmt.usd(o.wage))]),
+          h('p', {}, o?.jobs == null ? 'Not enough data' : [h('b', {}, fmt.n(o.jobs)), ` ${model.geo === 'US' ? 'US' : 'Massachusetts'} ${plural(o.jobs, 'worker')} · median pay `, h('b', {}, o.wage == null ? 'Not enough data' : fmt.usd(o.wage))]),
           src('oews'),
           h('div', {class: 'actions'}, h('a', {class: 'btn', href: ctx.hrefJob(j.soc)}, 'Job details'), h('a', {class: 'btn', href: `#/results?job=${j.soc}`}, 'Sample results')));
       }))),

@@ -1,4 +1,4 @@
-import {h, fmt, announce, src} from '../util.js';
+import {h, fmt, announce, src, plural} from '../util.js';
 import {lineChart, barList} from '../charts.js';
 import {jobSurvey} from './survey.js';
 
@@ -69,7 +69,7 @@ function moveCard(ctx, o, t, extra, meta) {
     h('a', {class: 't', href: ctx.hrefJob(t.soc), 'aria-label': `Open ${t.title}`}, t.title),
     h('div', {class: 'row'},
       h('span', {}, 'Median pay ', h('b', {class: wd > 0 ? 'up' : ''}, fmt.usd(t.wage)), wd != null ? ` (${fmt.usdDiff(wd)})` : ''),
-      h('span', {}, h('b', {}, fmt.n(t.jobs)), ' workers'),
+      h('span', {}, h('b', {}, fmt.n(t.jobs)), ` ${plural(t.jobs, 'worker')}`),
       meta),
     extra);
 }
@@ -103,7 +103,7 @@ function movesPanel(ctx, o, plan) {
           h('a', {class: 't', href: ctx.hrefJob(t.soc), 'aria-label': `Open ${t.title}`}, t.title),
           h('div', {class: 'row'}, h('span', {}, 'Skills in common ', h('b', {}, Math.round(p[1] * 100) + '%')),
             h('span', {}, 'Median pay ', h('b', {class: p[2] > 0 ? 'up' : ''}, fmt.usd(t.lc.ma_median_wage)), ` (${fmt.usdDiff(p[2])})`),
-            h('span', {}, 'MA ads asking for AI ', h('b', {}, fmt.pct(t.lc.ma_ai_2025))), h('span', {}, h('b', {}, fmt.n(t.lc.ma_employment)), ' MA workers')),
+            h('span', {}, 'MA ads asking for AI ', h('b', {}, fmt.pct(t.lc.ma_ai_2025))), h('span', {}, h('b', {}, fmt.n(t.lc.ma_employment)), ` MA ${plural(t.lc.ma_employment, 'worker')}`)),
           h('div', {class: 'row'}, h('span', {}, 'Skills to build: ', tags(String(p[3] || '').split(',').map((s) => s.trim()).filter(Boolean))))));
       }
     }

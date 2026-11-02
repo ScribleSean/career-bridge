@@ -1,4 +1,4 @@
-import {$, h, store, announce, loading, errorBox, reduceMotion, parseHash} from './js/util.js';
+import {$, h, fmt, store, announce, loading, errorBox, reduceMotion, parseHash, plural} from './js/util.js';
 import {loadData, makeModel} from './js/data.js';
 import {loadTitles, search} from './js/search.js';
 import {renderJob} from './js/views/job.js';
@@ -74,14 +74,14 @@ const q = $('q'), res = $('results');
 let hits = [], active = -1, timer = null;
 function drawResults() {
   res.replaceChildren(...hits.map((x, i) => h('li', {role: 'option', id: 'opt' + i, 'aria-selected': String(i === active), onmousedown: (e) => { e.preventDefault(); pick(x.o.soc); }},
-    h('span', {}, x.o.title, x.via ? h('small', {class: 'via'}, ` matched “${x.via}”`) : null), h('small', {}, `${x.o.jobs.toLocaleString('en-US')} jobs`))));
+    h('span', {}, x.o.title, x.via ? h('small', {class: 'via'}, ` matched “${x.via}”`) : null), h('small', {}, `${fmt.n(x.o.jobs)} ${plural(x.o.jobs, 'job')}`))));
   res.hidden = !hits.length; q.setAttribute('aria-expanded', String(!!hits.length));
   hits.length && active >= 0 ? q.setAttribute('aria-activedescendant', 'opt' + active) : q.removeAttribute('aria-activedescendant');
 }
 function runSearch() {
   const text = q.value.trim();
   hits = text.length < 2 ? [] : search(text, model.occ); active = hits.length ? 0 : -1; drawResults();
-  if (text.length >= 2) announce(hits.length ? `${hits.length} matching jobs. Use the arrow keys to choose.` : 'No matching jobs.');
+  if (text.length >= 2) announce(hits.length ? `${hits.length} matching ${plural(hits.length, 'job')}. Use the arrow keys to choose.` : 'No matching jobs.');
   if (text.length >= 2 && !hits.length) { res.hidden = false; res.replaceChildren(h('li', {role: 'option', 'aria-disabled': 'true'}, 'No matching jobs. Try a shorter word.')); }
 }
 q.addEventListener('input', () => { loadTitles().then(runSearch); clearTimeout(timer); timer = setTimeout(runSearch, 100); });

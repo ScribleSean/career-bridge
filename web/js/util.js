@@ -42,6 +42,10 @@ export const fmt = {
   },
 };
 
+const pluralRules = new Intl.PluralRules('en-US');
+// The noun for a count as displayed: plural(1, 'job') is 'job', plural(2, 'job') is 'jobs'.
+export const plural = (n, one, many = one + 's') => (pluralRules.select(Math.round(n ?? 0)) === 'one' ? one : many);
+
 let announceTimer;
 export function announce(msg) {
   const el = $('live');

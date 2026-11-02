@@ -1,4 +1,4 @@
-import {h, announce, fmt, src} from '../util.js';
+import {h, announce, fmt, src, plural} from '../util.js';
 import {JOBS, jobShort, ACT, actsFor, REGIONS, AI_LEVELS, WORKER_Q, EMPLOYER_Q, submit, totals, MIN_CELL, myCount, resetMine} from '../survey.js';
 
 const pct = (v) => (v == null ? '—' : `${Math.round(v * 100)}%`);
@@ -71,10 +71,10 @@ function renderPick(root, ctx) {
     h('ul', {class: 'jobcards'}, JOBS.map((j) => {
       const o = ctx.model.bySoc.get(j.soc);
       return h('li', {class: 'jobcard'}, h('h3', {}, j.short),
-        h('p', {class: 'fine'}, o?.jobs == null ? 'Not enough data' : `${fmt.n(o.jobs)} ${ctx.model.geo === 'US' ? 'US' : 'Massachusetts'} workers`), src('oews'),
+        h('p', {class: 'fine'}, o?.jobs == null ? 'Not enough data' : `${fmt.n(o.jobs)} ${ctx.model.geo === 'US' ? 'US' : 'Massachusetts'} ${plural(o.jobs, 'worker')}`), src('oews'),
         h('div', {class: 'actions'}, h('a', {class: 'btn primary', href: `#/survey?job=${j.soc}&as=worker`}, 'I do this job'), h('a', {class: 'btn', href: `#/survey?job=${j.soc}&as=employer`}, 'I hire for this job')));
     })),
-    myCount() ? h('p', {class: 'fine'}, `You've answered ${myCount()} time${myCount() === 1 ? '' : 's'} in this browser. `, h('button', {type: 'button', class: 'linkbtn', onclick: () => { if (resetMine()) { renderPick(root, ctx); announce('Your answers were cleared.'); } else { announce('Could not clear your answers. Try again.'); } }}, 'Clear my answers')) : null));
+    myCount() ? h('p', {class: 'fine'}, `You've answered ${myCount()} ${plural(myCount(), 'time')} in this browser. `, h('button', {type: 'button', class: 'linkbtn', onclick: () => { if (resetMine()) { renderPick(root, ctx); announce('Your answers were cleared.'); } else { announce('Could not clear your answers. Try again.'); } }}, 'Clear my answers')) : null));
 }
 
 export function renderResults(root, ctx, params) {
@@ -105,10 +105,10 @@ export function renderResults(root, ctx, params) {
       h('div', {}, h('span', {class: 'lbl', id: 'jl'}, 'Job'), h('div', {class: 'segs', role: 'group', 'aria-labelledby': 'jl'}, JOBS.map((j) => h('button', {type: 'button', class: 'seg', 'aria-pressed': String(j.soc === job.soc), onclick: () => set({job: j.soc})}, j.short)))),
       h('label', {for: 'rr'}, 'Region', h('select', {id: 'rr', onchange: (e) => set({region: e.target.value})}, h('option', {value: ''}, 'All of Massachusetts'), REGIONS.map((x) => h('option', {value: x, selected: x === region}, x))))),
     h('div', {class: 'summary four'},
-      tile(pct(t.useAnyAI), 'of workers use an AI tool for work', `${t.nW} workers`),
-      tile(pct(t.trainedByEmployer), 'of workers got AI training from their employer', `${t.nW} workers`),
-      tile(pct(t.adsMentionAI), 'of employers mention AI skills in job ads', `${t.nE} employers`),
-      tile(pct(t.employersTrain), 'of employers train this role on AI', `${t.nE} employers`)),
+      tile(pct(t.useAnyAI), 'of workers use an AI tool for work', `${t.nW} ${plural(t.nW, 'worker')}`),
+      tile(pct(t.trainedByEmployer), 'of workers got AI training from their employer', `${t.nW} ${plural(t.nW, 'worker')}`),
+      tile(pct(t.adsMentionAI), 'of employers mention AI skills in job ads', `${t.nE} ${plural(t.nE, 'employer')}`),
+      tile(pct(t.employersTrain), 'of employers train this role on AI', `${t.nE} ${plural(t.nE, 'employer')}`)),
     gaps.length ? h('section', {class: 'panel act'}, h('h3', {}, 'Where workers and employers differ'),
       h('ul', {class: 'ticks plain'}, gaps.map(({a}) => h('li', {}, h('b', {}, ACT[a.id].label), `: ${pct(a.aiOften + a.aiSome)} of workers do it with AI, and ${pct(a.growPct)} of employers say it is becoming more important.`)))) : null,
     h('section', {class: 'panel'}, h('h3', {}, 'What the work involves'), src('onet'),
