@@ -14,6 +14,7 @@ import re
 import sys
 import threading
 import unittest
+from http.client import HTTPConnection
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import urlopen
@@ -240,6 +241,63 @@ class NoDataServerTest(unittest.TestCase):
             self.assertEqual(self.get(path)[:2], (200, ctype), path)
 
 
+class HostHeaderTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.directory = tempfile.TemporaryDirectory()
+        path = Path(cls.directory.name) / "synthetic.json"
+        path.write_text(json.dumps({"occ": [{"soc": "1", "title": "Test Job"}]}))
+        cls.httpd = server.make_server(port=0, data_path=str(path))
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.directory.cleanup()
+
+    def get(self, path, host):
+        connection = HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=5)
+        try:
+            connection.putrequest("GET", path, skip_host=True)
+            if host is not None:
+                connection.putheader("Host", host)
+            connection.endheaders()
+            response = connection.getresponse()
+            response.read()
+            return response.status
+        finally:
+            connection.close()
+
+    def test_untrusted_host_rejected(self):
+        for path in ("/careerbridge.json", "/api/occupations/1"):
+            with self.subTest(path=path):
+                self.assertEqual(self.get(path, "evil.example"), 403)
+
+    def test_missing_host_rejected(self):
+        self.assertEqual(self.get("/api/meta", None), 403)
+
+    def test_loopback_hosts_allowed(self):
+        for host in ("localhost", "127.0.0.1", "[::1]"):
+            for path in ("/careerbridge.json", "/api/occupations/1"):
+                with self.subTest(host=host, path=path):
+                    self.assertEqual(self.get(path, "%s:%d" % (host, self.httpd.server_port)), 200)
+
+    def test_non_loopback_bind_unchanged(self):
+        httpd = server.make_server(port=0, host="0.0.0.0", data_path=self.httpd.store.path, allow_remote=True)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        connection = HTTPConnection("127.0.0.1", httpd.server_port, timeout=5)
+        try:
+            connection.request("GET", "/careerbridge.json", headers={"Host": "evil.example"})
+            response = connection.getresponse()
+            response.read()
+            self.assertEqual(response.status, 200)
+        finally:
+            connection.close()
+            httpd.shutdown()
+            httpd.server_close()
+
+
 class SyntheticServerTest(unittest.TestCase):
     def test_search_accents(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -298,6 +356,8 @@ class SyntheticServerTest(unittest.TestCase):
         store = MagicMock()
         store.meta_payload.side_effect = RuntimeError("private file detail")
         handler = object.__new__(server.make_handler(store))
+        handler.server = MagicMock(server_address=("127.0.0.1", 8000))
+        handler.headers = {"Host": "localhost:8000"}
         handler.path = "/api/meta"
         handler._json = MagicMock()
         with patch.object(sys, "stderr", new_callable=io.StringIO) as err:

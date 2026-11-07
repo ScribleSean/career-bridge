@@ -311,6 +311,13 @@ def make_handler(store):
 
         def do_GET(self):
             try:
+                if ipaddress.ip_address(self.server.server_address[0]).is_loopback:
+                    try:
+                        hostname = urlparse("//" + self.headers.get("Host", "")).hostname
+                    except ValueError:
+                        hostname = None
+                    if hostname not in {"localhost", "127.0.0.1", "::1"}:
+                        return self._json({"error": "forbidden host"}, 403)
                 url = urlparse(self.path)
                 path = unquote(url.path)
                 params = {k: v[-1] for k, v in parse_qs(url.query).items()}
