@@ -399,6 +399,8 @@ class WebDiscoveryTest(unittest.TestCase):
         """unittest's default test*.py pattern otherwise misses web.test.mjs."""
         node = shutil.which("node")
         if node is None:
+            if os.environ.get("CB_REQUIRE_NODE") == "1":
+                self.fail("node not installed (CB_REQUIRE_NODE=1)")
             self.skipTest("node not installed")
         files = sorted(str(p) for p in Path(HERE).glob("*.test.mjs"))
         self.assertTrue(files, "no tests/*.test.mjs files found")
@@ -411,6 +413,30 @@ class WebDiscoveryTest(unittest.TestCase):
         # Node reports a file that defines no tests as one passing test named after the file.
         empty = re.findall(r"^ok \d+ - (.+\.test\.mjs)$", result.stdout, re.MULTILINE)
         self.assertEqual(empty, [], "node test files define no tests")
+
+
+class WebDiscoveryPolicyTest(unittest.TestCase):
+    def test_missing_node_skips_by_default(self):
+        with patch.dict(os.environ), patch.object(shutil, "which", return_value=None):
+            os.environ.pop("CB_REQUIRE_NODE", None)
+            result = unittest.TestResult()
+            WebDiscoveryTest("test_node_suite").run(result)
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.skipped), 1)
+        self.assertEqual(result.skipped[0][1], "node not installed")
+        self.assertEqual(result.failures, [])
+        self.assertEqual(result.errors, [])
+
+    def test_missing_required_node_fails(self):
+        with patch.dict(os.environ, {"CB_REQUIRE_NODE": "1"}), \
+                patch.object(shutil, "which", return_value=None):
+            result = unittest.TestResult()
+            WebDiscoveryTest("test_node_suite").run(result)
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(result.skipped, [])
+        self.assertEqual(len(result.failures), 1)
+        self.assertIn("node not installed (CB_REQUIRE_NODE=1)", result.failures[0][1])
+        self.assertEqual(result.errors, [])
 
 
 if __name__ == "__main__":
