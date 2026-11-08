@@ -68,4 +68,4 @@ Issues and pull requests are welcome. Before you open a PR:
 - Load the app, open the overview, the survey, the results, a job and About, and check that the console shows no errors.
 - Don't commit anything under `data/` or `sgi_dataset/`. Lightcast data is licensed, and `build-site.sh` fails if `site/` would contain it.
 
-`docs/img/demo.gif` is a manual recording; nothing in this repo produces it. With the app running, `node docs/media/record.mjs` records the APNG clips in headless Chrome without npm packages.
+`docs/img/demo.gif` is a manual recording; nothing in this repo produces it. With the app running, `node docs/media/record.mjs` records the animated PNGs `docs/img/tour-*.png` in headless Chrome without npm packages.
