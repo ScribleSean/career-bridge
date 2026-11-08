@@ -283,8 +283,8 @@ class Store:
         return m
 
 
-def parse_allowed_authority(authority, allowed_hosts):
-    """Return the normalized (host, port) for an allowed HTTP authority."""
+def parse_allowed_authority(authority, allowed_hosts=None):
+    """Return a normalized authority, optionally restricting non-IP hosts."""
     if not authority or any(c.isspace() for c in authority):
         return None
     try:
@@ -299,7 +299,7 @@ def parse_allowed_authority(authority, allowed_hosts):
             hostname = str(ipaddress.ip_address(hostname))
         except ValueError:
             hostname = hostname.lower().rstrip(".")
-            if hostname not in allowed_hosts:
+            if allowed_hosts is not None and hostname not in allowed_hosts:
                 return None
         return hostname, port
     except ValueError:
@@ -338,11 +338,13 @@ def make_handler(store, allowed_hosts=()):
                 hosts = self.headers.get_all("Host", [])
                 if len(hosts) > 1:
                     return self._json({"error": "duplicate host"}, 400)
-                host_authority = (parse_allowed_authority(hosts[0], allowed_hosts)
+                host_authority = (parse_allowed_authority(hosts[0])
                                   if len(hosts) == 1 else None)
                 # Keep HTTP/1.0 on the same host boundary as HTTP/1.1. Allowing a
                 # missing Host here would create a validation bypass.
                 if host_authority is None:
+                    return self._json({"error": "invalid host"}, 400)
+                if parse_allowed_authority(hosts[0], allowed_hosts) is None:
                     return self._json({"error": "forbidden host"}, 403)
                 try:
                     url = urlparse(self.path)

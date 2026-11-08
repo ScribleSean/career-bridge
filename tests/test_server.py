@@ -294,18 +294,21 @@ class HostHeaderTest(unittest.TestCase):
             ("different absolute authority with port", "GET http://127.0.0.1:{0}/api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n\r\n", 400),
             ("absolute authority userinfo", "GET http://user@localhost/api/meta HTTP/1.1\r\nHost: localhost\r\n\r\n", 400),
             ("absolute authority userinfo with port", "GET http://user@localhost:{0}/api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n\r\n", 400),
-            ("empty host", "GET /api/meta HTTP/1.1\r\nHost:\r\n\r\n", 403),
-            ("HTTP/1.0 without host", "GET /api/meta HTTP/1.0\r\n\r\n", 403),
-            ("nonnumeric port", "GET /api/meta HTTP/1.1\r\nHost: localhost:abc\r\n\r\n", 403),
-            ("out-of-range port", "GET /api/meta HTTP/1.1\r\nHost: localhost:99999\r\n\r\n", 403),
+            ("disallowed host", "GET /api/meta HTTP/1.1\r\nHost: evil.example\r\n\r\n", 403),
+            ("disallowed host with port", "GET /api/meta HTTP/1.1\r\nHost: evil.example:8000\r\n\r\n", 403),
+            ("missing host", "GET /api/meta HTTP/1.1\r\n\r\n", 400),
+            ("empty host", "GET /api/meta HTTP/1.1\r\nHost:\r\n\r\n", 400),
+            ("HTTP/1.0 without host", "GET /api/meta HTTP/1.0\r\n\r\n", 400),
+            ("nonnumeric port", "GET /api/meta HTTP/1.1\r\nHost: localhost:abc\r\n\r\n", 400),
+            ("out-of-range port", "GET /api/meta HTTP/1.1\r\nHost: localhost:99999\r\n\r\n", 400),
             ("uppercase host", "GET /api/meta HTTP/1.1\r\nHost: LOCALHOST\r\n\r\n", 200),
             ("uppercase host with port", "GET /api/meta HTTP/1.1\r\nHost: LOCALHOST:{0}\r\n\r\n", 200),
             ("trailing-dot host", "GET /api/meta HTTP/1.1\r\nHost: localhost.\r\n\r\n", 200),
             ("trailing-dot host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost.:{0}\r\n\r\n", 200),
             ("bracketed IPv6", "GET /api/meta HTTP/1.1\r\nHost: [::1]\r\n\r\n", 200),
             ("bracketed IPv6 with port", "GET /api/meta HTTP/1.1\r\nHost: [::1]:{0}\r\n\r\n", 200),
-            ("folded host", "GET /api/meta HTTP/1.1\r\nHost: localhost\r\n evil.example\r\n\r\n", 403),
-            ("folded host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n evil.example\r\n\r\n", 403),
+            ("folded host", "GET /api/meta HTTP/1.1\r\nHost: localhost\r\n evil.example\r\n\r\n", 400),
+            ("folded host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n evil.example\r\n\r\n", 400),
             ("mixed-case duplicate host", "GET /api/meta HTTP/1.1\r\nHost: localhost\r\nhost: localhost\r\n\r\n", 400),
             ("mixed-case duplicate host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost:{0}\r\nhost: localhost:{0}\r\n\r\n", 400),
         ]
@@ -319,7 +322,7 @@ class HostHeaderTest(unittest.TestCase):
                 self.assertEqual(self.get(path, "evil.example"), 403)
 
     def test_missing_host_rejected(self):
-        self.assertEqual(self.get("/api/meta", None), 403)
+        self.assertEqual(self.get("/api/meta", None), 400)
 
     def test_allowed_hosts(self):
         for host in ("localhost", "localhost.", "127.0.0.1", "127.0.0.2", "192.168.1.2", "[::1]", "[2001:db8::1]"):
