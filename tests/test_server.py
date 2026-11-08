@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 import os
 import re
+import socket
 import sys
 import threading
 import unittest
@@ -272,6 +273,45 @@ class HostHeaderTest(unittest.TestCase):
             return response.status
         finally:
             connection.close()
+
+    def raw_status(self, request):
+        with socket.create_connection(("127.0.0.1", self.httpd.server_port), timeout=5) as connection:
+            connection.sendall(request)
+            response = b""
+            while b"\r\n" not in response:
+                chunk = connection.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+        return int(response.split(b"\r\n", 1)[0].split()[1])
+
+    def test_raw_request_authorities(self):
+        port = self.httpd.server_port
+        cases = [
+            ("absolute authority", "GET http://localhost/api/meta HTTP/1.1\r\nHost: localhost\r\n\r\n", 200),
+            ("absolute authority with port", "GET http://localhost:{0}/api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n\r\n", 200),
+            ("different absolute authority", "GET http://127.0.0.1/api/meta HTTP/1.1\r\nHost: localhost\r\n\r\n", 400),
+            ("different absolute authority with port", "GET http://127.0.0.1:{0}/api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n\r\n", 400),
+            ("absolute authority userinfo", "GET http://user@localhost/api/meta HTTP/1.1\r\nHost: localhost\r\n\r\n", 400),
+            ("absolute authority userinfo with port", "GET http://user@localhost:{0}/api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n\r\n", 400),
+            ("empty host", "GET /api/meta HTTP/1.1\r\nHost:\r\n\r\n", 403),
+            ("HTTP/1.0 without host", "GET /api/meta HTTP/1.0\r\n\r\n", 403),
+            ("nonnumeric port", "GET /api/meta HTTP/1.1\r\nHost: localhost:abc\r\n\r\n", 403),
+            ("out-of-range port", "GET /api/meta HTTP/1.1\r\nHost: localhost:99999\r\n\r\n", 403),
+            ("uppercase host", "GET /api/meta HTTP/1.1\r\nHost: LOCALHOST\r\n\r\n", 200),
+            ("uppercase host with port", "GET /api/meta HTTP/1.1\r\nHost: LOCALHOST:{0}\r\n\r\n", 200),
+            ("trailing-dot host", "GET /api/meta HTTP/1.1\r\nHost: localhost.\r\n\r\n", 200),
+            ("trailing-dot host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost.:{0}\r\n\r\n", 200),
+            ("bracketed IPv6", "GET /api/meta HTTP/1.1\r\nHost: [::1]\r\n\r\n", 200),
+            ("bracketed IPv6 with port", "GET /api/meta HTTP/1.1\r\nHost: [::1]:{0}\r\n\r\n", 200),
+            ("folded host", "GET /api/meta HTTP/1.1\r\nHost: localhost\r\n evil.example\r\n\r\n", 403),
+            ("folded host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost:{0}\r\n evil.example\r\n\r\n", 403),
+            ("mixed-case duplicate host", "GET /api/meta HTTP/1.1\r\nHost: localhost\r\nhost: localhost\r\n\r\n", 400),
+            ("mixed-case duplicate host with port", "GET /api/meta HTTP/1.1\r\nHost: localhost:{0}\r\nhost: localhost:{0}\r\n\r\n", 400),
+        ]
+        for name, request, expected in cases:
+            with self.subTest(name=name):
+                self.assertEqual(self.raw_status(request.format(port).encode("ascii")), expected)
 
     def test_untrusted_host_rejected(self):
         for path in ("/careerbridge.json", "/api/occupations/1"):
