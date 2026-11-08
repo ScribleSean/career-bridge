@@ -256,12 +256,16 @@ class HostHeaderTest(unittest.TestCase):
         cls.httpd.server_close()
         cls.directory.cleanup()
 
-    def get(self, path, host):
-        connection = HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=5)
+    def get(self, path, host, httpd=None, duplicate=False):
+        httpd = httpd or self.httpd
+        address = httpd.server_address[0]
+        connection = HTTPConnection("127.0.0.1" if address == "0.0.0.0" else address, httpd.server_port, timeout=5)
         try:
             connection.putrequest("GET", path, skip_host=True)
             if host is not None:
                 connection.putheader("Host", host)
+                if duplicate:
+                    connection.putheader("Host", host)
             connection.endheaders()
             response = connection.getresponse()
             response.read()
@@ -277,23 +281,37 @@ class HostHeaderTest(unittest.TestCase):
     def test_missing_host_rejected(self):
         self.assertEqual(self.get("/api/meta", None), 403)
 
-    def test_loopback_hosts_allowed(self):
-        for host in ("localhost", "127.0.0.1", "[::1]"):
-            for path in ("/careerbridge.json", "/api/occupations/1"):
-                with self.subTest(host=host, path=path):
-                    self.assertEqual(self.get(path, "%s:%d" % (host, self.httpd.server_port)), 200)
+    def test_allowed_hosts(self):
+        for host in ("localhost", "localhost.", "127.0.0.1", "127.0.0.2", "192.168.1.2", "[::1]", "[2001:db8::1]"):
+            for suffix in ("", ":8000"):
+                with self.subTest(host=host, suffix=suffix):
+                    self.assertEqual(self.get("/api/meta", host + suffix), 200)
 
-    def test_non_loopback_bind_unchanged(self):
-        httpd = server.make_server(port=0, host="0.0.0.0", data_path=self.httpd.store.path, allow_remote=True)
+    def test_absolute_authority(self):
+        self.assertEqual(self.get("http://evil.example/api/meta", "localhost"), 400)
+
+    def test_duplicate_host(self):
+        self.assertEqual(self.get("/api/meta", "localhost", duplicate=True), 400)
+
+    def test_remote_hosts(self):
+        self.check_bind("0.0.0.0", allow_remote=True)
+
+    def test_other_loopback_bind(self):
+        self.check_bind("127.0.0.2")
+
+    def test_explicit_names(self):
+        self.check_bind("0.0.0.0", allow_remote=True, allowed_hosts=["mymac.local", "other.local"])
+
+    def check_bind(self, bind, **kwargs):
+        httpd = server.make_server(port=0, host=bind, data_path=self.httpd.store.path, **kwargs)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
-        connection = HTTPConnection("127.0.0.1", httpd.server_port, timeout=5)
         try:
-            connection.request("GET", "/careerbridge.json", headers={"Host": "evil.example"})
-            response = connection.getresponse()
-            response.read()
-            self.assertEqual(response.status, 200)
+            self.assertEqual(self.get("/api/meta", "evil.example", httpd=httpd), 403)
+            for host in (bind, "localhost", "localhost.", "127.0.0.2", "[::1]", *kwargs.get("allowed_hosts", [])):
+                for suffix in ("", ":8000"):
+                    with self.subTest(host=host, suffix=suffix):
+                        self.assertEqual(self.get("/api/meta", host + suffix, httpd=httpd), 200)
         finally:
-            connection.close()
             httpd.shutdown()
             httpd.server_close()
 
@@ -347,17 +365,19 @@ class SyntheticServerTest(unittest.TestCase):
             self.assertEqual(exit.exception.code, 2)
             self.assertIn("--allow-remote", err.getvalue())
             self.assertIn("licensed file would be served with no auth", err.getvalue())
-        with patch.object(sys, "argv", ["server.py", "--host", "0.0.0.0", "--allow-remote"]), \
+        with patch.object(sys, "argv", ["server.py", "--host", "0.0.0.0", "--allow-remote", "--allowed-host", "mymac.local", "--allowed-host", "other.local"]), \
                 patch.object(server, "make_server") as make, patch("builtins.print"):
             server.main()
-            make.assert_called_once_with(8000, "0.0.0.0", allow_remote=True)
+            make.assert_called_once_with(8000, "0.0.0.0", allow_remote=True, allowed_hosts=["mymac.local", "other.local"])
 
     def test_500_hides_exception_and_logs_to_stderr(self):
         store = MagicMock()
         store.meta_payload.side_effect = RuntimeError("private file detail")
         handler = object.__new__(server.make_handler(store))
         handler.server = MagicMock(server_address=("127.0.0.1", 8000))
-        handler.headers = {"Host": "localhost:8000"}
+        from email.message import Message
+        handler.headers = Message()
+        handler.headers["Host"] = "localhost:8000"
         handler.path = "/api/meta"
         handler._json = MagicMock()
         with patch.object(sys, "stderr", new_callable=io.StringIO) as err:

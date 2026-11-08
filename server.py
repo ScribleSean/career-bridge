@@ -283,7 +283,29 @@ class Store:
         return m
 
 
-def make_handler(store):
+def allowed_authority(authority, allowed_hosts):
+    """Accept a plain HTTP authority with an IP literal or an allowed name."""
+    if not authority or any(c.isspace() for c in authority):
+        return False
+    try:
+        parsed = urlparse("//" + authority)
+        hostname = parsed.hostname
+        port = parsed.port  # Validate the optional port.
+        if not hostname or parsed.username is not None or parsed.password is not None:
+            return False
+        if parsed.path or parsed.query or parsed.fragment or authority.endswith(":"):
+            return False
+        try:
+            ipaddress.ip_address(hostname)
+            return True
+        except ValueError:
+            return hostname.lower().rstrip(".") in allowed_hosts
+    except ValueError:
+        return False
+
+
+def make_handler(store, allowed_hosts=()):
+    allowed_hosts = {"localhost", *(name.lower().rstrip(".") for name in allowed_hosts)}
     class Handler(BaseHTTPRequestHandler):
         server_version = "CareerBridge/1.0"
 
@@ -311,14 +333,19 @@ def make_handler(store):
 
         def do_GET(self):
             try:
-                if ipaddress.ip_address(self.server.server_address[0]).is_loopback:
-                    try:
-                        hostname = urlparse("//" + self.headers.get("Host", "")).hostname
-                    except ValueError:
-                        hostname = None
-                    if hostname not in {"localhost", "127.0.0.1", "::1"}:
-                        return self._json({"error": "forbidden host"}, 403)
-                url = urlparse(self.path)
+                hosts = self.headers.get_all("Host", [])
+                if len(hosts) > 1:
+                    return self._json({"error": "duplicate host"}, 400)
+                if len(hosts) != 1 or not allowed_authority(hosts[0], allowed_hosts):
+                    return self._json({"error": "forbidden host"}, 403)
+                try:
+                    url = urlparse(self.path)
+                except ValueError:
+                    return self._json({"error": "invalid request target"}, 400)
+                if (url.scheme or url.netloc) and (
+                        url.scheme not in {"http", "https"}
+                        or not allowed_authority(url.netloc, allowed_hosts)):
+                    return self._json({"error": "forbidden authority"}, 400)
                 path = unquote(url.path)
                 params = {k: v[-1] for k, v in parse_qs(url.query).items()}
                 if path.startswith("/api/"):
@@ -373,7 +400,7 @@ def make_handler(store):
     return Handler
 
 
-def make_server(port=8000, host="127.0.0.1", data_path=None, allow_remote=False):
+def make_server(port=8000, host="127.0.0.1", data_path=None, allow_remote=False, allowed_hosts=()):
     try:
         loopback = ipaddress.ip_address(host).is_loopback
     except ValueError:
@@ -386,7 +413,7 @@ def make_server(port=8000, host="127.0.0.1", data_path=None, allow_remote=False)
     else:
         p, ref = resolve_data_path()
         store = Store(p, ref)
-    httpd = ThreadingHTTPServer((host, port), make_handler(store))
+    httpd = ThreadingHTTPServer((host, port), make_handler(store, allowed_hosts))
     httpd.daemon_threads = True
     httpd.store = store
     return httpd
@@ -397,9 +424,11 @@ def main():
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--allow-remote", action="store_true")
+    ap.add_argument("--allowed-host", action="append", default=[], metavar="NAME",
+                    help="allow an additional Host name (repeatable)")
     args = ap.parse_args()
     try:
-        httpd = make_server(args.port, args.host, allow_remote=args.allow_remote)
+        httpd = make_server(args.port, args.host, allow_remote=args.allow_remote, allowed_hosts=args.allowed_host)
     except ValueError as e:
         ap.error(str(e))
     s = httpd.store
