@@ -369,3 +369,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 }
 .qtable tbody th { position: static; background: none; }
 .survey .tablewrap { max-height: none; overflow: visible; border: 0; }
+
+.pulsecards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 16px; }
+.pulsecard { display: grid; gap: 12px; align-content: start; padding: 20px; border: 1px solid var(--line); border-top: 4px solid var(--brand); background: var(--surface); min-width: 0; }
+.pulsecard h3 { font-size: 1.2rem; }
+.pulsecard h3 a { color: inherit; }
+.pulseitems { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.pulseitems li { display: grid; gap: 6px; }
+.pulsecard a.src { white-space: normal; text-decoration: none; }
+.flag { font-size: .85rem; font-weight: 600; padding: 0 8px; border-radius: var(--r-sm); background: var(--neutral-soft); color: var(--muted); }
+.learn { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; font-weight: 600; }
+.viewhead .meta { color: var(--muted); }

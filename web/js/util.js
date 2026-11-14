@@ -69,7 +69,7 @@ export function parseHash(hash) {
   const parts = path.split('/').filter(Boolean);
   const view = parts[0] || 'overview';
   const overview = {view: 'overview', params: {}, soc: ''};
-  if (!['overview', 'survey', 'results', 'board', 'about', 'job'].includes(view)) return overview;
+  if (!['overview', 'survey', 'results', 'board', 'about', 'job', 'pulse'].includes(view)) return overview;
   try {
     return {view, params: Object.fromEntries(new URLSearchParams(query)), soc: view === 'job' ? decodeURIComponent(parts[1] || '') : ''};
   } catch {

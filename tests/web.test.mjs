@@ -318,3 +318,41 @@ test('counts read "1 worker" and "2 workers" wherever a number meets a noun', (t
     says(root, n, 'worker'); says(root, n, 'employer');
   }
 });
+
+import {PULSE, pulseProblems} from '../web/js/pulse.js';
+import {renderPulse} from '../web/js/views/pulse.js';
+
+test('every pulse item is dated inside its issue, links the vendor page and quotes it briefly', () => {
+  assert.deepEqual(pulseProblems(PULSE), []);
+  const bad = {...PULSE, jobs: [{soc: '43-6014', learn: {name: 'Writing', im: 2}, items: [{what: 'x', product: 'y', date: '2026-09-25', url: 'http://a', quote: ''}]}]};
+  assert.equal(pulseProblems(bad).length, 4);
+});
+
+test('pulse shows each job, links every item to its source and says when nothing was confirmed', () => {
+  const ctx = context();
+  const root = render(renderPulse, ctx);
+  const cards = nodes(root, (n) => n.className === 'pulsecard');
+  assert.equal(cards.length, PULSE.jobs.length);
+  const links = nodes(root, (n) => n.tag === 'a' && n.className === 'src').map((n) => n.attrs.href);
+  assert.deepEqual(links, PULSE.jobs.flatMap((j) => j.items.map((i) => i.url)));
+  const empty = PULSE.jobs.filter((j) => !j.items.length).length;
+  assert.equal(nodes(root, (n) => n.textContent === 'Nothing confirmed in this issue' && n.tag === 'p').length, empty);
+  assert.ok(cards[0].textContent.includes('Learn next'));
+});
+
+test('nearby jobs keep the pipeline order, so the close match the plan names comes first', () => {
+  const ctx = context('MA', {}, false, 3);
+  const [a, b, c] = ctx.model.all;
+  ctx.model.plans[a.soc] = {lean: [], use: [], timeline: [], moves: [
+    {soc: b.soc, sim: 0.7, loose: false, skills: []}, {soc: c.soc, sim: 0.9, loose: true, skills: ['Skills: Writing']}]};
+  const root = render(renderJob, ctx, a);
+  const cards = nodes(root, (n) => n.className === 'move');
+  assert.ok(cards[0].textContent.includes('Skills in common 70%'));
+  assert.ok(cards[1].textContent.includes('Rougher match') && cards[1].textContent.includes('Writing'));
+  assert.ok(!cards[1].textContent.includes('Skills: '));
+});
+
+test('a pulse quote of 15 words is too long', () => {
+  const item = {what: 'x', product: 'y', date: PULSE.from, url: 'https://a', quote: Array(15).fill('w').join(' ')};
+  assert.equal(pulseProblems({...PULSE, jobs: [{soc: '43-6014', learn: {name: 'Writing', im: 4}, items: [item]}]}).length, 1);
+});

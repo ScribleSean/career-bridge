@@ -11,7 +11,7 @@ const SOURCES = {'Where this job stands with AI': ['lc'], 'How much AI is used o
 const panel = (title, ...kids) => h('section', {class: 'panel'}, h('h3', {}, title), SOURCES[title] ? src(...SOURCES[title]) : null, ...kids);
 const QSHORT = {[GAP]: 'Broad gap', [HIHI]: 'Employers ask', [LOHI]: 'Lower overlap, higher signal', [LOLO]: 'Lower overlap, low signal'};
 const tags = (arr) => h('div', {class: 'tags'}, arr.map((s) => h('span', {class: 'tag'}, s)));
-const bare = (s) => s.replace(/^(Knowledge|Work Activities|Abilities): /, '');
+const bare = (s) => s.replace(/^(Knowledge|Skills|Work Activities|Abilities): /, '');
 const fold = (summary, ...kids) => h('details', {class: 'more'}, h('summary', {}, summary), h('div', {class: 'morebody'}, ...kids));
 
 function header(ctx, o) {
@@ -83,9 +83,8 @@ function movesPanel(ctx, o, plan) {
   const draw = () => {
     list.replaceChildren();
     if (mode === 'less') {
-      // Ranked by skill match, then pay; never by lower AI use.
-      const mv = (plan.moves || []).map((m) => ({m, t: model.bySoc.get(m.soc)})).filter((x) => x.t && x.t.jobs != null)
-        .sort((a, b) => b.m.sim - a.m.sim || (b.t.wage || 0) - (a.t.wage || 0));
+      // Kept in pipeline order (pipeline/moves.py): close O*NET matches first, then skill match, then pay; never AI use.
+      const mv = (plan.moves || []).map((m) => ({m, t: model.bySoc.get(m.soc)})).filter((x) => x.t && x.t.jobs != null);
       note.textContent = !mv.length ? 'No close match' : '';
       note.hidden = !note.textContent;
       for (const {m, t} of mv) {

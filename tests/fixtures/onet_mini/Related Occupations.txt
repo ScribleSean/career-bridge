@@ -1,0 +1,7 @@
+O*NET-SOC Code	Related O*NET-SOC Code	Relatedness Tier	Index
+11-0001.00	11-0003.00	Primary-Short	1
+11-0001.00	11-0002.00	Primary-Long	11
+11-0001.00	11-0005.00	Primary-Short	2
+11-0001.00	11-0001.00	Primary-Short	3
+11-0006.00	11-0001.00	Primary-Short	1
+11-0002.00	11-0001.00	Supplemental	1

@@ -17,6 +17,11 @@ from pathlib import Path
 
 import pandas as pd
 
+try:
+    from pipeline import moves as nearby
+except ImportError:
+    import moves as nearby
+
 REPO = Path(__file__).resolve().parent.parent
 SIB = REPO.parent / "sgi_analysis"
 SRC = Path(os.environ.get("ATLAS_SRC", REPO / "pipeline" / "atlas_src"))
@@ -76,12 +81,16 @@ def build():
         "automation": pair("collaboration_bucket_automation_pct"),
         "topics": sorted(({"name": n, "apr": round(r["2026-04-01"], 2), "may": round(r["2026-05-01"], 2)} for n, r in topics.iterrows()), key=lambda t: -t["may"]),
     }
-    return {
+    out = {
         "meta": {"built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "horizon": HORIZON, "scenarios": SCENARIOS,
                  "usage_period": "April and May 2026", "oews_year": OEWS_YEAR,
                  "sources": ["BLS OEWS, May 2019 to May 2025", "O*NET 31.0", "Anthropic Economic Index, June 2026 release (Claude.ai, US)"]},
         "occ": occ, "plans": plan, "usage": usage,
     }
+    # Nearby jobs come from O*NET Related Occupations (pipeline/moves.py), not the older analysis output.
+    if (SRC / "moves.json").exists():
+        nearby.apply(out, json.loads((SRC / "moves.json").read_text()))
+    return out
 
 
 def titles():

@@ -6,6 +6,7 @@ import {renderBoard} from './js/views/board.js';
 import {renderAbout} from './js/views/about.js';
 import {renderOverview} from './js/views/overview.js';
 import {renderSurvey, renderResults} from './js/views/survey.js';
+import {renderPulse} from './js/views/pulse.js';
 
 const DEFAULT_SOC = '43-6014';
 const EXAMPLES = [['43-6014', 'Admin assistant'], ['43-4051', 'Customer service rep'], ['43-3031', 'Bookkeeping clerk'], ['25-2021', 'Elementary teacher'],
@@ -49,6 +50,7 @@ function route() {
   } else if (r.view === 'board') { renderBoard(view, ctx, r.params); document.title = 'For workforce boards · Career Bridge'; }
   else if (r.view === 'overview') { renderOverview(view, ctx); document.title = 'Career Bridge · AI at work in Massachusetts'; }
   else if (r.view === 'survey') { renderSurvey(view, ctx, r.params); document.title = 'AI at work survey · Career Bridge'; key = 'survey:' + (r.params.job || '') + (r.params.as || ''); }
+  else if (r.view === 'pulse') { renderPulse(view, ctx); document.title = 'New for AI at work · Career Bridge'; }
   else if (r.view === 'results') { renderResults(view, ctx, r.params); document.title = 'Survey results · Career Bridge'; }
   else { renderAbout(view, ctx); document.title = 'About the numbers · Career Bridge'; }
   if (key !== lastKey) {   // new page: move focus to its heading so screen-reader users hear where they are
@@ -60,7 +62,7 @@ function route() {
 }
 
 function drawNav(r) {
-  const items = [['overview', 'Overview', '#/'], ['survey', 'Survey', hashFor('survey')], ['results', 'Results', hashFor('results')], ['job', 'Look up a job', ctx.hrefJob(lastSoc)], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About', hashFor('about')]];
+  const items = [['overview', 'Overview', '#/'], ['survey', 'Survey', hashFor('survey')], ['results', 'Results', hashFor('results')], ['job', 'Look up a job', ctx.hrefJob(lastSoc)], ['pulse', 'This month', hashFor('pulse')], ...(model.full ? [['board', 'For workforce boards', hashFor('board')]] : []), ['about', 'About', hashFor('about')]];
   $('nav').replaceChildren(...items.map(([k, label, href]) => h('a', {href, 'aria-current': k === r.view ? 'page' : null}, label)));
 }
 
